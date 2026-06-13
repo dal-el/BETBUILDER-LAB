@@ -69,6 +69,29 @@ header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;
 .lg-row .x{cursor:pointer;color:var(--faint);font-size:16px;line-height:1}
 .lg-row .x:hover{color:var(--red)}
 
+/* Grouped leagues (fold/unfold) */
+.lg-group{background:var(--panel2);border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.lg-ghead{display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;user-select:none;font-size:12.5px}
+.lg-ghead:hover{background:var(--panel)}
+.lg-ghead .arw{font-family:var(--mono);font-size:10px;color:var(--amber);width:11px;transition:transform .15s;display:inline-block}
+.lg-group.collapsed .lg-ghead .arw{transform:rotate(-90deg)}
+.lg-ghead .gnm{flex:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lg-ghead .gct{font-family:var(--mono);color:var(--amber);font-size:11px}
+.lg-ghead .gx{cursor:pointer;color:var(--faint);font-size:15px;line-height:1}
+.lg-ghead .gx:hover{color:var(--red)}
+.lg-gbody{display:flex;flex-direction:column;gap:6px;padding:0 10px 10px}
+.lg-group.collapsed .lg-gbody{display:none}
+.lg-sub{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);
+  border-radius:8px;padding:7px 11px;font-size:12px}
+.lg-sub .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
+.lg-sub .ct{font-family:var(--mono);color:var(--amber);font-size:10.5px}
+.lg-sub .x{cursor:pointer;color:var(--faint);font-size:15px;line-height:1}
+.lg-sub .x:hover{color:var(--red)}
+.lg-tools{display:flex;gap:8px;margin-bottom:9px}
+.lg-tools button{font-family:var(--mono);font-size:10.5px;color:var(--muted);background:none;
+  border:1px solid var(--line);padding:4px 9px;border-radius:7px;cursor:pointer}
+.lg-tools button:hover{color:var(--amber);border-color:var(--amber-dim)}
+
 /* Pattern builder */
 .grp-title{font-family:var(--mono);font-size:10.5px;letter-spacing:2px;color:var(--faint);
   text-transform:uppercase;margin:16px 0 8px;padding-bottom:5px;border-bottom:1px solid var(--line)}
@@ -1074,18 +1097,88 @@ function mergeIntoLeague(name,matches){
   let ex=LEAGUES.find(l=>l.name===name);
   if(ex) ex.matches.push(...matches); else LEAGUES.push({name,matches});
 }
+/* Βγαζει το ονομα "ομαδας πρωταθληματος" απο το ονομα αρχειου, αφαιρωντας τη σεζον.
+   π.χ. LA_LIGA_2025_2026 -> LA LIGA | SERIE_A_BR_2025 -> SERIE A BR | LIGUE-2024-2025 -> LIGUE */
+function groupKeyOf(name){
+  let s=String(name);
+  s=s.replace(/\.(zip|xlsx)$/i,"");
+  // διωξε σεζον: 2025_2026 / 2025-2026 / 24_25 / σκετο 2025 στο τελος
+  s=s.replace(/[ _\-]+\d{4}[ _\-]+\d{4}\s*$/,"");
+  s=s.replace(/[ _\-]+\d{2}[ _\-]+\d{2}\s*$/,"");
+  s=s.replace(/[ _\-]+\d{4}\s*$/,"");
+  s=s.replace(/[ _\-]+\d{2}\s*$/,"");
+  s=s.replace(/[_\-]+/g," ").trim();
+  return s.toUpperCase()||String(name);
+}
+let LG_COLLAPSED={}; // groupKey -> true αν διπλωμενο
 function renderLeagues(){
   const host=document.getElementById("leagues"); host.innerHTML="";
+
+  if(LEAGUES.length){
+    const tools=document.createElement("div"); tools.className="lg-tools";
+    tools.innerHTML=`<button id="lg-collapse-all">▸ Δίπλωσε όλα</button><button id="lg-expand-all">▾ Άνοιξε όλα</button>`;
+    host.appendChild(tools);
+    tools.querySelector("#lg-collapse-all").addEventListener("click",()=>{
+      groupNames().forEach(g=>LG_COLLAPSED[g]=true); renderLeagues();
+    });
+    tools.querySelector("#lg-expand-all").addEventListener("click",()=>{
+      LG_COLLAPSED={}; renderLeagues();
+    });
+  }
+
+  // ομαδοποιηση διατηρωντας τη σειρα εμφανισης
+  const groups={}; const order=[];
   LEAGUES.forEach((l,i)=>{
-    const r=document.createElement("div"); r.className="lg-row";
-    r.innerHTML=`<span class="nm" title="${l.name}">🏆 ${l.name}</span><span class="ct">${l.matches.length} ματς</span><span class="x" data-i="${i}">✕</span>`;
-    r.querySelector(".x").addEventListener("click",()=>{LEAGUES.splice(i,1);renderLeagues();});
-    host.appendChild(r);
+    const g=groupKeyOf(l.name);
+    if(!groups[g]){groups[g]=[]; order.push(g);}
+    groups[g].push({l,i});
   });
+
+  order.forEach(g=>{
+    const items=groups[g];
+    const total=items.reduce((s,it)=>s+it.l.matches.length,0);
+    const collapsed=!!LG_COLLAPSED[g];
+    const grp=document.createElement("div"); grp.className="lg-group"+(collapsed?" collapsed":"");
+
+    const head=document.createElement("div"); head.className="lg-ghead";
+    head.innerHTML=`<span class="arw">▾</span><span class="gnm" title="${g}">🏆 ${g}</span>`+
+      `<span class="gct">${items.length} σεζόν · ${total} ματς</span><span class="gx" title="Αφαίρεση όλων">✕</span>`;
+    head.addEventListener("click",e=>{
+      if(e.target.classList.contains("gx")) return;
+      LG_COLLAPSED[g]=!LG_COLLAPSED[g]; renderLeagues();
+    });
+    head.querySelector(".gx").addEventListener("click",e=>{
+      e.stopPropagation();
+      const names=new Set(items.map(it=>it.l.name));
+      LEAGUES=LEAGUES.filter(l=>!names.has(l.name));
+      renderLeagues();
+    });
+    grp.appendChild(head);
+
+    const body=document.createElement("div"); body.className="lg-gbody";
+    items.forEach(({l})=>{
+      const sub=document.createElement("div"); sub.className="lg-sub";
+      sub.innerHTML=`<span class="nm" title="${l.name}">${l.name}</span><span class="ct">${l.matches.length} ματς</span><span class="x">✕</span>`;
+      sub.querySelector(".x").addEventListener("click",()=>{
+        const idx=LEAGUES.findIndex(x=>x.name===l.name);
+        if(idx>=0) LEAGUES.splice(idx,1);
+        renderLeagues();
+      });
+      body.appendChild(sub);
+    });
+    grp.appendChild(body);
+    host.appendChild(grp);
+  });
+
   const tot=LEAGUES.reduce((s,l)=>s+l.matches.length,0);
   document.querySelector("#st-leagues b").textContent=LEAGUES.length;
   document.querySelector("#st-matches b").textContent=tot;
   document.getElementById("run").disabled=tot===0;
+}
+function groupNames(){
+  const seen={}; const out=[];
+  LEAGUES.forEach(l=>{const g=groupKeyOf(l.name); if(!seen[g]){seen[g]=1;out.push(g);}});
+  return out;
 }
 
 /* ============================================================
