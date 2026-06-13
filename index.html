@@ -2,7 +2,7 @@
 <html lang="el">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>BetBuilder Lab — Pattern Backtester</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -272,8 +272,8 @@ table.res td.pv.zero{color:var(--faint)}
 body{background:#0a3a20;background-attachment:fixed}
 .pitch-bg{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;
   background:
-    radial-gradient(130% 90% at 50% 45%, transparent 55%, rgba(0,0,0,.6) 100%),
-    repeating-linear-gradient(90deg,#0a3c21 0 7.69%,#0c4528 7.69% 15.38%);}
+    radial-gradient(130% 90% at 50% 45%, transparent 52%, rgba(0,0,0,.62) 100%),
+    repeating-linear-gradient(90deg,#0c4426 0 7.69%,#0f5230 7.69% 15.38%);}
 .pitch-bg::before,.pitch-bg::after{content:"";position:absolute;top:-12%;width:55%;height:70%;
   background:radial-gradient(circle at 50% 0,rgba(225,255,238,.12),transparent 62%)}
 .pitch-bg::before{left:-8%}.pitch-bg::after{right:-8%}
@@ -287,9 +287,8 @@ header{position:sticky;top:0;z-index:40;margin:0 -26px 24px;padding:16px 24px;
 header::after{content:"";position:absolute;left:24px;right:24px;bottom:9px;height:2px;
   background:repeating-linear-gradient(90deg,var(--amber) 0 14px,transparent 14px 22px);opacity:.5}
 .logo{display:flex;align-items:center;gap:13px}
-.logo::before{content:"";width:42px;height:42px;border-radius:50%;flex:none;
-  background:radial-gradient(circle at 38% 32%,#fff,#cfd6cf 42%,#0c0c0c 43%);
-  box-shadow:0 0 0 2px #06140d,0 6px 16px rgba(0,0,0,.6),inset 0 0 0 5px #0c0c0c;}
+.logo::before{content:none}
+.ball{font-size:34px;line-height:1;flex:none;filter:drop-shadow(0 3px 8px rgba(0,0,0,.5))}
 .logo b{font-family:var(--disp);font-weight:700;font-size:25px;letter-spacing:1px;text-transform:uppercase;
   color:#fff;text-shadow:0 0 16px rgba(255,210,74,.35)}
 .logo b span{color:var(--amber);text-shadow:0 0 16px var(--amber)}
@@ -304,9 +303,9 @@ header::after{content:"";position:absolute;left:24px;right:24px;bottom:9px;heigh
   text-shadow:0 0 12px rgba(255,210,74,.5)}
 
 /* --- chalkboard cards --- */
-.panel{background:rgba(5,28,17,.82);backdrop-filter:blur(7px);border:1px solid var(--line2);
+.panel{background:rgba(6,30,18,.50);backdrop-filter:blur(9px) saturate(1.1);border:1px solid var(--line2);
   border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
-.panel-h{background:linear-gradient(180deg,rgba(255,255,255,.06),transparent);
+.panel-h{background:linear-gradient(180deg,rgba(3,18,11,.82),rgba(3,18,11,.34));
   border-bottom:1px dashed var(--line2);padding:15px 20px;gap:11px}
 .panel-h h2{font-family:var(--disp);font-weight:600;font-size:15px;letter-spacing:1.5px;
   text-transform:uppercase;color:#fff}
@@ -341,9 +340,9 @@ header::after{content:"";position:absolute;left:24px;right:24px;bottom:9px;heigh
 
 /* --- section labels (chalk) --- */
 .section-lbl{font-family:var(--disp);font-weight:600;font-size:13px;letter-spacing:1.5px;color:#fff;
-  border-bottom:1px dashed var(--line2);padding-bottom:8px}
-.section-lbl::before{width:0;height:0;border-radius:0;background:none;
-  content:"⚽";font-size:13px;filter:grayscale(1) brightness(2)}
+  border-bottom:1px dashed var(--line2);padding-bottom:8px;gap:9px}
+.section-lbl::before{content:"⚽";width:auto;height:auto;background:none;border-radius:0;
+  font-size:14px;line-height:1;margin-right:1px;flex:none}
 
 /* --- verdict = final-score board --- */
 .verdict{border-radius:16px;padding:26px 28px;box-shadow:var(--shadow-lg);
@@ -375,13 +374,46 @@ table.res tr:hover td,.wrow:hover td{background:rgba(255,210,74,.10)}
 .modal-card{border:1px solid var(--line2);border-radius:16px;box-shadow:var(--shadow-lg);background:rgba(4,22,14,.96)}
 
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+/* --- table alignment: data columns centred under their headers --- */
+table.res th,table.res td{text-align:center;vertical-align:middle}
+table.res th:first-child,table.res td:first-child,table.res td.team{text-align:left}
+.kpi{display:flex;flex-direction:column;align-items:flex-start;justify-content:center}
+
+/* --- bigger, easier-to-tap controls --- */
+.leg{grid-template-columns:28px 1fr 56px 96px 56px 96px;gap:6px;margin-bottom:7px}
+.leg .lbl{font-size:12px}
+.status{width:28px;height:42px;font-size:17px;border-radius:8px}
+.stp{border-radius:9px}
+.stp button{width:32px;height:42px;font-size:20px;font-weight:700;line-height:1;padding:0}
+.stp input{height:42px;font-size:15px}
+.leg select{height:42px;font-size:13px;border-radius:8px;padding:5px 4px}
+.odd-in{height:40px;font-size:15px}
+
+/* --- stop mobile zoom + text-selection handles when tapping buttons --- */
+.stp,.stp button,.seg,.seg button,.status,.btn,.mini-btn,.lbl,.grp-title,
+.section-lbl,.panel-h,.pill,.logo,.histbtn{
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+  touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+
+/* --- undo / redo --- */
+.histbtn{width:42px;height:42px;flex:none;display:grid;place-items:center;padding:0;
+  font-size:19px;border-radius:10px;background:var(--panel2);color:var(--ink);
+  border:1px solid var(--line2);cursor:pointer;font-family:var(--sans)}
+.histbtn:hover:not(:disabled){border-color:var(--amber);background:rgba(255,210,74,.12);color:var(--amber)}
+.histbtn:disabled{opacity:.32;cursor:not-allowed}
+
+@media(max-width:680px){
+  .leg{grid-template-columns:26px 1fr 48px 84px 48px 84px;gap:5px}
+  .stp button{width:28px;height:44px}
+  .status,.stp input,.leg select{height:44px}
+}
 /* ==================== /STADIUM / PITCH SKIN ==================== */
 </style>
 </head>
 <body>
 <div class="pitch-bg" aria-hidden="true">
   <svg viewBox="0 0 1050 680" preserveAspectRatio="xMidYMid slice">
-    <g fill="none" stroke="#eafff2" stroke-width="2.5" stroke-opacity=".5">
+    <g fill="none" stroke="#eafff2" stroke-width="2.5" stroke-opacity=".62">
       <rect x="24" y="24" width="1002" height="632" rx="2"/>
       <line x1="525" y1="24" x2="525" y2="656"/>
       <circle cx="525" cy="340" r="91.5"/>
@@ -406,6 +438,7 @@ table.res tr:hover td,.wrow:hover td{background:rgba(255,210,74,.10)}
 <div class="wrap">
   <header>
     <div class="logo">
+      <span class="ball" aria-hidden="true">⚽</span>
       <b>BETBUILDER<span>·</span>LAB</b>
       <small>pattern backtester</small>
     </div>
@@ -508,6 +541,8 @@ table.res tr:hover td,.wrow:hover td{background:rgba(255,210,74,.10)}
               <input class="odd-in" id="fav-min" placeholder="από" inputmode="decimal" style="width:74px">
               <span style="color:var(--faint);font-family:var(--mono)">—</span>
               <input class="odd-in" id="fav-max" placeholder="έως" inputmode="decimal" style="width:74px">
+              <button class="histbtn" id="undo" title="Αναίρεση επιλογής" aria-label="Undo" disabled>↶</button>
+              <button class="histbtn" id="redo" title="Επαναφορά επιλογής" aria-label="Redo" disabled>↷</button>
             </div>
           </div>
 
@@ -1157,12 +1192,12 @@ function buildLegs(){
       host.appendChild(row);
       const op1=row.querySelector(".op1"),v1=row.querySelector(".v1"),op2=row.querySelector(".op2"),v2=row.querySelector(".v2");
       if(d.op1){op1.value=d.op1==="!="?"≠":d.op1; v1.value=d.val1||"";}
-      [op1,v1,op2,v2].forEach(el=>el.addEventListener("input",()=>refreshRow(row)));
-      row.querySelectorAll(".dec").forEach(b=>b.addEventListener("click",()=>stepValue(row,b.dataset.w,-1)));
-      row.querySelectorAll(".inc").forEach(b=>b.addEventListener("click",()=>stepValue(row,b.dataset.w,+1)));
+      [op1,v1,op2,v2].forEach(el=>el.addEventListener("input",()=>{refreshRow(row);histSnap(el.tagName==="SELECT");}));
+      row.querySelectorAll(".dec").forEach(b=>b.addEventListener("click",()=>{stepValue(row,b.dataset.w,-1);histSnap(true);}));
+      row.querySelectorAll(".inc").forEach(b=>b.addEventListener("click",()=>{stepValue(row,b.dataset.w,+1);histSnap(true);}));
       row.querySelector(".status").addEventListener("click",()=>{
         if(!row.classList.contains("active")) return;
-        op1.value="";v1.value="";op2.value="";v2.value="";refreshRow(row);
+        op1.value="";v1.value="";op2.value="";v2.value="";refreshRow(row);histSnap(true);
       });
       refreshRow(row);
     });
@@ -1689,7 +1724,7 @@ document.getElementById("dir-in").addEventListener("change",e=>handleFiles(e.tar
 
 document.querySelectorAll("#seg-side button").forEach(b=>b.addEventListener("click",()=>{
   document.querySelectorAll("#seg-side button").forEach(x=>x.classList.remove("on"));
-  b.classList.add("on"); SIDE=b.dataset.v; relabelLegs();
+  b.classList.add("on"); SIDE=b.dataset.v; relabelLegs(); histSnap(true);
 }));
 
 function refreshHcap(){
@@ -1816,7 +1851,7 @@ document.querySelectorAll(".modal").forEach(m=>m.addEventListener("click",ev=>{
   if(ev.target===m || (ev.target.hasAttribute&&ev.target.hasAttribute("data-close"))) m.classList.remove("open");
 }));
 document.getElementById("reset").addEventListener("click",()=>{
-  loadPatternObj({pattern:{},side:"FAVORITE",avgOdd:"",hcap:""}); toast("Reset — όλα μηδέν ✓");
+  loadPatternObj({pattern:{},side:"FAVORITE",avgOdd:"",hcap:""}); toast("Reset — όλα μηδέν ✓"); histSnap(true);
 });
 
 let toastT;
@@ -1827,11 +1862,34 @@ window.addEventListener("resize",()=>{ const cv=document.getElementById("eq"); i
 const _origRender=render;
 render=function(res){ window._lastRows=res.rows; _origRender(res); };
 
+/* ---- undo / redo (ιστορικό επιλογών) ---- */
+let HIST=[],HI=-1,HLOCK=false,HTIMER=null;
+function _stateStr(){ try{return JSON.stringify(currentPatternObj());}catch(e){return"";} }
+function histSnap(immediate){
+  if(HLOCK) return;
+  const take=()=>{ const s=_stateStr(); if(!s) return;
+    if(HI>=0 && HIST[HI]===s) return;
+    HIST=HIST.slice(0,HI+1); HIST.push(s); HI=HIST.length-1; updHistBtns(); };
+  clearTimeout(HTIMER);
+  if(immediate) take(); else HTIMER=setTimeout(take,300);
+}
+function _applyState(s){ HLOCK=true; try{ loadPatternObj(JSON.parse(s)); }catch(e){} HLOCK=false; updHistBtns(); }
+function histUndo(){ clearTimeout(HTIMER); if(HI>0){ HI--; _applyState(HIST[HI]); } }
+function histRedo(){ clearTimeout(HTIMER); if(HI<HIST.length-1){ HI++; _applyState(HIST[HI]); } }
+function updHistBtns(){ const u=document.getElementById("undo"),r=document.getElementById("redo");
+  if(u) u.disabled=HI<=0; if(r) r.disabled=HI>=HIST.length-1; }
+document.getElementById("undo").addEventListener("click",histUndo);
+document.getElementById("redo").addEventListener("click",histRedo);
+["fav-min","fav-max","avg-odd"].forEach(id=>{const el=document.getElementById(id); if(el) el.addEventListener("input",()=>histSnap(false));});
+document.getElementById("hcap").addEventListener("change",()=>histSnap(true));
+document.getElementById("ghcap").addEventListener("change",()=>histSnap(true));
+
 /* init */
 buildLegs();
 refreshHcap();
 refreshGhcap();
 loadLibrary();
+histSnap(true); /* baseline */
 </script>
 </body>
 </html>
