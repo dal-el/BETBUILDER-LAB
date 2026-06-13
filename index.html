@@ -91,6 +91,15 @@ header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;
 .lg-tools button{font-family:var(--mono);font-size:10.5px;color:var(--muted);background:none;
   border:1px solid var(--line);padding:4px 9px;border-radius:7px;cursor:pointer}
 .lg-tools button:hover{color:var(--amber);border-color:var(--amber-dim)}
+/* Checkboxes ενεργοποιησης/εξαιρεσης */
+.lg-ck{appearance:none;-webkit-appearance:none;width:15px;height:15px;flex:0 0 15px;
+  border:1.5px solid var(--faint);border-radius:4px;cursor:pointer;position:relative;background:transparent}
+.lg-ck:checked{background:var(--amber);border-color:var(--amber)}
+.lg-ck:checked::after{content:"✓";position:absolute;top:-2px;left:1px;font-size:12px;font-weight:700;color:#0a0a0b}
+.lg-ck:indeterminate{background:var(--amber-dim);border-color:var(--amber)}
+.lg-ck:indeterminate::after{content:"–";position:absolute;top:-3px;left:2.5px;font-size:13px;font-weight:700;color:var(--amber)}
+.lg-group.off .lg-ghead .gnm,.lg-sub.off .nm{opacity:.4;text-decoration:line-through}
+.lg-group.off{opacity:.75}
 
 /* Pattern builder */
 .grp-title{font-family:var(--mono);font-size:10.5px;letter-spacing:2px;color:var(--faint);
@@ -1137,15 +1146,30 @@ function renderLeagues(){
   order.forEach(g=>{
     const items=groups[g];
     const total=items.reduce((s,it)=>s+it.l.matches.length,0);
+    const enabledCount=items.filter(it=>it.l.enabled!==false).length;
+    const grpOn=enabledCount>0;
     const collapsed=!!LG_COLLAPSED[g];
-    const grp=document.createElement("div"); grp.className="lg-group"+(collapsed?" collapsed":"");
+    const grp=document.createElement("div"); grp.className="lg-group"+(collapsed?" collapsed":"")+(grpOn?"":" off");
 
     const head=document.createElement("div"); head.className="lg-ghead";
-    head.innerHTML=`<span class="arw">▾</span><span class="gnm" title="${g}">🏆 ${g}</span>`+
-      `<span class="gct">${items.length} σεζόν · ${total} ματς</span><span class="gx" title="Αφαίρεση όλων">✕</span>`;
+    head.innerHTML=`<span class="arw">▾</span>`+
+      `<input type="checkbox" class="lg-ck gck" title="Ενεργό/Εξαίρεση πρωταθλήματος">`+
+      `<span class="gnm" title="${g}">🏆 ${g}</span>`+
+      `<span class="gct">${enabledCount}/${items.length} σεζόν · ${total} ματς</span><span class="gx" title="Αφαίρεση όλων">✕</span>`;
+    const gck=head.querySelector(".gck");
+    gck.checked=grpOn;
+    gck.indeterminate = enabledCount>0 && enabledCount<items.length;
     head.addEventListener("click",e=>{
-      if(e.target.classList.contains("gx")) return;
+      if(e.target.classList.contains("gx")||e.target.classList.contains("gck")) return;
       LG_COLLAPSED[g]=!LG_COLLAPSED[g]; renderLeagues();
+    });
+    gck.addEventListener("click",e=>e.stopPropagation());
+    gck.addEventListener("change",e=>{
+      e.stopPropagation();
+      const on=gck.checked;
+      const names=new Set(items.map(it=>it.l.name));
+      LEAGUES.forEach(l=>{ if(names.has(l.name)) l.enabled=on; });
+      renderLeagues();
     });
     head.querySelector(".gx").addEventListener("click",e=>{
       e.stopPropagation();
@@ -1157,8 +1181,12 @@ function renderLeagues(){
 
     const body=document.createElement("div"); body.className="lg-gbody";
     items.forEach(({l})=>{
-      const sub=document.createElement("div"); sub.className="lg-sub";
-      sub.innerHTML=`<span class="nm" title="${l.name}">${l.name}</span><span class="ct">${l.matches.length} ματς</span><span class="x">✕</span>`;
+      const subOn=l.enabled!==false;
+      const sub=document.createElement("div"); sub.className="lg-sub"+(subOn?"":" off");
+      sub.innerHTML=`<input type="checkbox" class="lg-ck sck" title="Ενεργή/Εξαίρεση σεζόν">`+
+        `<span class="nm" title="${l.name}">${l.name}</span><span class="ct">${l.matches.length} ματς</span><span class="x">✕</span>`;
+      const sck=sub.querySelector(".sck"); sck.checked=subOn;
+      sck.addEventListener("change",()=>{ l.enabled=sck.checked; renderLeagues(); });
       sub.querySelector(".x").addEventListener("click",()=>{
         const idx=LEAGUES.findIndex(x=>x.name===l.name);
         if(idx>=0) LEAGUES.splice(idx,1);
@@ -1170,8 +1198,10 @@ function renderLeagues(){
     host.appendChild(grp);
   });
 
-  const tot=LEAGUES.reduce((s,l)=>s+l.matches.length,0);
-  document.querySelector("#st-leagues b").textContent=LEAGUES.length;
+  const enabledLeagues=LEAGUES.filter(l=>l.enabled!==false);
+  const tot=enabledLeagues.reduce((s,l)=>s+l.matches.length,0);
+  const totalAll=LEAGUES.reduce((s,l)=>s+l.matches.length,0);
+  document.querySelector("#st-leagues b").textContent=enabledLeagues.length;
   document.querySelector("#st-matches b").textContent=tot;
   document.getElementById("run").disabled=tot===0;
 }
@@ -1552,8 +1582,8 @@ document.getElementById("run").addEventListener("click",()=>{
   const gsel=document.getElementById("ghcap").value;
   if(gsel) legs.push({cat:"GOALS HANDICAP",goalsH:{side:gsel[0],h:parseFloat(gsel.slice(1))}});
   if(!legs.length){toast("Όρισε τουλάχιστον ένα leg ή handicap.");return;}
-  const all=[]; LEAGUES.forEach(l=>all.push(...l.matches));
-  if(!all.length){toast("Φόρτωσε δεδομένα πρώτα.");return;}
+  const all=[]; LEAGUES.forEach(l=>{ if(l.enabled!==false) all.push(...l.matches); });
+  if(!all.length){toast("Φόρτωσε ή ενεργοποίησε δεδομένα πρώτα.");return;}
   const avg=document.getElementById("avg-odd").value;
   if(normFloat(avg)===null||normFloat(avg)<=0){toast("Όρισε μέση απόδοση (π.χ. 151).");return;}
   const favMin=normFloat(document.getElementById("fav-min").value);
