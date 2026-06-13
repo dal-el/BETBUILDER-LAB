@@ -1,0 +1,1558 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BetBuilder Lab — Pattern Backtester</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#0a0a0b; --bg2:#0f0f11; --panel:#141417; --panel2:#1a1a1e; --line:#26262c;
+  --ink:#ece9e2; --muted:#8a8a93; --faint:#5a5a63;
+  --amber:#ffb02e; --amber-dim:#3a2c10;
+  --green:#3ddc97; --green-dim:#10271f; --red:#ff5c6c; --red-dim:#2a1318;
+  --mono:'JetBrains Mono',ui-monospace,monospace; --sans:'Sora',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:var(--sans); background:var(--bg); color:var(--ink);
+  background-image:
+    linear-gradient(rgba(255,176,46,.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,176,46,.025) 1px,transparent 1px);
+  background-size:38px 38px; background-position:center;
+  -webkit-font-smoothing:antialiased; line-height:1.45; font-size:14px;
+}
+.wrap{max-width:2100px;margin:0 auto;padding:18px 26px 80px}
+
+/* Header */
+header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:22px}
+.logo{display:flex;align-items:baseline;gap:10px}
+.logo b{font-weight:800;font-size:22px;letter-spacing:-.5px}
+.logo b span{color:var(--amber)}
+.logo small{font-family:var(--mono);font-size:11px;color:var(--faint);letter-spacing:2px;text-transform:uppercase}
+.statusbar{margin-left:auto;display:flex;gap:10px;flex-wrap:wrap}
+.pill{font-family:var(--mono);font-size:11px;color:var(--muted);background:var(--panel);
+  border:1px solid var(--line);padding:6px 12px;border-radius:100px;white-space:nowrap}
+.pill b{color:var(--amber)}
+
+/* Layout */
+.grid{display:grid;grid-template-columns:600px 1fr;gap:20px;align-items:start}
+@media(max-width:1180px){.grid{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.panel-h{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line);background:var(--bg2)}
+.panel-h h2{font-size:12px;letter-spacing:2.5px;text-transform:uppercase;color:var(--muted);font-weight:600}
+.panel-h .dot{width:7px;height:7px;border-radius:50%;background:var(--amber);box-shadow:0 0 10px var(--amber)}
+.panel-b{padding:18px}
+
+/* Dropzone */
+.drop{border:1.5px dashed var(--line);border-radius:12px;padding:26px 18px;text-align:center;cursor:pointer;
+  transition:.18s;background:linear-gradient(180deg,transparent,rgba(255,176,46,.02))}
+.drop:hover,.drop.over{border-color:var(--amber);background:rgba(255,176,46,.05)}
+.drop .ico{font-size:26px}
+.drop p{color:var(--muted);font-size:13px;margin-top:8px}
+.drop p b{color:var(--ink)}
+.drop .or{font-family:var(--mono);font-size:11px;color:var(--faint);margin-top:6px}
+.mini-btn{font-family:var(--mono);font-size:11px;color:var(--amber);background:none;border:1px solid var(--amber-dim);
+  padding:4px 10px;border-radius:7px;cursor:pointer}
+.mini-btn:hover{background:var(--amber-dim)}
+.leagues{margin-top:14px;display:flex;flex-direction:column;gap:7px}
+.lg-row{display:flex;align-items:center;gap:10px;background:var(--panel2);border:1px solid var(--line);
+  border-radius:9px;padding:9px 12px;font-size:12.5px}
+.lg-row .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lg-row .ct{font-family:var(--mono);color:var(--amber);font-size:11px}
+.lg-row .x{cursor:pointer;color:var(--faint);font-size:16px;line-height:1}
+.lg-row .x:hover{color:var(--red)}
+
+/* Pattern builder */
+.grp-title{font-family:var(--mono);font-size:10.5px;letter-spacing:2px;color:var(--faint);
+  text-transform:uppercase;margin:16px 0 8px;padding-bottom:5px;border-bottom:1px solid var(--line)}
+.grp-title:first-child{margin-top:4px}
+.leg{display:grid;grid-template-columns:22px 1fr 50px 64px 50px 64px;gap:4px;align-items:center;margin-bottom:5px}
+.leg.active .lbl{color:var(--amber)}
+.leg .lbl{font-size:11.5px;color:var(--muted);white-space:normal;line-height:1.2;cursor:default;padding-right:4px}
+.leg select{font-family:var(--mono);font-size:11px;background:var(--bg);color:var(--ink);
+  border:1px solid var(--line);border-radius:6px;padding:5px 2px;width:100%;text-align:center}
+.leg select:focus{outline:none;border-color:var(--amber)}
+.leg select.set{border-color:var(--amber);color:var(--amber)}
+.status{width:20px;height:24px;border-radius:5px;border:1px solid var(--line);background:var(--bg);
+  font-family:var(--mono);font-size:14px;font-weight:700;line-height:1;padding:0;color:var(--red);cursor:default}
+.status.on{color:var(--green);border-color:#1d5a44;cursor:pointer}
+.status.on:hover{background:var(--green-dim)}
+.stp{display:flex;align-items:center;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--bg)}
+.stp.set{border-color:var(--amber)}
+.stp button{width:16px;border:none;background:var(--panel2);color:var(--muted);font-size:13px;cursor:pointer;
+  line-height:1;padding:5px 0;font-family:var(--mono);flex:none}
+.stp button:hover{background:var(--amber-dim);color:var(--amber)}
+.stp input{border:none;background:transparent;width:100%;min-width:0;text-align:center;
+  font-family:var(--mono);font-size:11px;color:var(--ink);padding:5px 1px}
+.stp input:focus{outline:none}
+.stp input::placeholder{color:var(--faint)}
+.stp.set input{color:var(--amber)}
+
+.ctrl-row{display:flex;align-items:center;gap:10px;margin-top:16px;flex-wrap:wrap}
+.ctrl-row label{font-family:var(--mono);font-size:10.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--faint)}
+.hint{letter-spacing:0;text-transform:none;color:var(--faint);font-size:9.5px}
+.hcap-expl{font-family:var(--mono);font-size:10px;color:var(--amber);margin-top:6px;max-width:230px;line-height:1.5}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{font-family:var(--mono);font-size:11px;background:var(--bg);color:var(--muted);border:none;
+  padding:7px 13px;cursor:pointer;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:none}
+.seg button.on{background:var(--amber);color:#1a1205;font-weight:700}
+.odd-in{font-family:var(--mono);font-size:13px;background:var(--bg);color:var(--amber);border:1px solid var(--line);
+  border-radius:8px;padding:7px 10px;width:90px;text-align:center}
+.odd-in:focus{outline:none;border-color:var(--amber)}
+.odd-in.set{border-color:var(--amber);color:var(--amber)}
+
+.actions{display:flex;gap:9px;margin-top:20px;flex-wrap:wrap}
+.btn{font-family:var(--sans);font-weight:700;font-size:13px;border:none;border-radius:10px;padding:12px 18px;cursor:pointer;flex:1;min-width:120px;transition:.15s}
+.btn.run{background:var(--amber);color:#1a1205}
+.btn.run:hover{filter:brightness(1.08)}
+.btn.run:disabled{opacity:.4;cursor:not-allowed}
+.btn.ghost{flex:0;background:var(--panel2);color:var(--muted);border:1px solid var(--line);font-weight:500;font-size:12px;padding:12px 14px}
+.btn.ghost:hover{color:var(--ink);border-color:var(--amber)}
+.warn{margin-top:12px;font-size:11.5px;color:var(--amber);background:var(--amber-dim);border-radius:8px;padding:8px 11px;display:none}
+
+/* Results */
+#results{display:none}
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:420px;
+  color:var(--faint);text-align:center;gap:12px}
+.empty .big{font-size:40px;opacity:.4}
+.empty p{max-width:300px;font-size:13px;line-height:1.6}
+
+.verdict{border-radius:14px;padding:22px 24px;margin-bottom:18px;border:1px solid var(--line);position:relative;overflow:hidden}
+.verdict.good{background:linear-gradient(135deg,var(--green-dim),var(--panel));border-color:#1d5a44}
+.verdict.bad{background:linear-gradient(135deg,var(--red-dim),var(--panel));border-color:#5a2230}
+.verdict .tag{font-family:var(--mono);font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+.verdict h1{font-size:30px;font-weight:800;letter-spacing:-.5px;margin:4px 0 2px}
+.verdict.good h1{color:var(--green)} .verdict.bad h1{color:var(--red)}
+.verdict .sub{font-size:13px;color:var(--muted);margin-top:6px}
+.verdict .sub b{color:var(--ink);font-family:var(--mono)}
+
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin-bottom:18px}
+@media(max-width:620px){.kpis{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:14px}
+.kpi .k{font-family:var(--mono);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--faint)}
+.kpi .v{font-family:var(--mono);font-size:22px;font-weight:700;margin-top:6px;letter-spacing:-.5px}
+.kpi .v.pos{color:var(--green)} .kpi .v.neg{color:var(--red)} .kpi .v.amb{color:var(--amber)}
+
+.section-lbl{font-family:var(--mono);font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:var(--muted);margin:6px 0 12px;display:flex;align-items:center;gap:8px}
+.section-lbl::before{content:"";width:6px;height:6px;background:var(--amber);border-radius:50%}
+
+.buckets{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin-bottom:22px}
+@media(max-width:620px){.buckets{grid-template-columns:repeat(2,1fr)}}
+.bk{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:14px;border-top:3px solid var(--line)}
+.bk.pos{border-top-color:var(--green)} .bk.neg{border-top-color:var(--red)} .bk.zero{opacity:.5}
+.bk .rng{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--ink)}
+.bk .pnl{font-family:var(--mono);font-size:20px;font-weight:700;margin:7px 0 9px}
+.bk .pnl.pos{color:var(--green)} .bk .pnl.neg{color:var(--red)}
+.bk .meta{font-family:var(--mono);font-size:10.5px;color:var(--muted);line-height:1.7}
+.bk .meta b{color:var(--ink)}
+.bar{height:5px;background:var(--bg);border-radius:3px;margin-top:8px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--amber)}
+
+.chart-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:22px}
+.chart-card canvas{width:100%;display:block}
+
+table.res{width:100%;border-collapse:collapse;font-size:12px}
+table.res th{font-family:var(--mono);font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--faint);
+  text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel)}
+table.res td{padding:8px 10px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11.5px}
+table.res td.team{font-family:var(--sans)}
+table.res tr:hover td{background:var(--panel2)}
+.tbl-wrap{max-height:440px;overflow:auto;border:1px solid var(--line);border-radius:11px}
+.tbl-wrap.tall{max-height:none}
+.wrow{cursor:pointer}
+.wrow:hover td{background:var(--panel2)}
+.wrow.sel td{background:rgba(255,176,46,.12)!important}
+.md-wrap{margin-top:14px}
+.md-hint{color:var(--faint);font-size:12px;font-style:italic;padding:10px 2px}
+.md-head{background:var(--panel2);border:1px solid #1d5a44;border-radius:11px 11px 0 0;padding:14px 16px}
+.md-title{font-size:16px;font-weight:700;color:var(--amber)}
+.md-meta{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:5px}
+.md-meta b{color:var(--ink)}
+.md-file{color:var(--faint);font-size:10px;word-break:break-all}
+.md-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:7px;background:var(--panel);
+  border:1px solid var(--line);border-top:none;border-radius:0 0 11px 11px;padding:14px}
+.md-cell{display:flex;flex-direction:column;background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:7px 9px}
+.md-cell.on{border-color:var(--amber);background:rgba(255,176,46,.1)}
+.md-k{font-family:var(--mono);font-size:8.5px;letter-spacing:.4px;text-transform:uppercase;color:var(--faint);line-height:1.3}
+.md-cell.on .md-k{color:var(--amber)}
+.md-v{font-family:var(--mono);font-size:14px;color:var(--ink);margin-top:3px}
+.fav-tag{font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:5px;background:var(--amber-dim);color:var(--amber)}
+table.res td.pv{font-family:var(--mono);text-align:center;line-height:1.35;white-space:nowrap}
+table.res td.pv b{font-size:12px}
+table.res td.pv .sub{display:block;font-size:8.5px;color:var(--faint);margin-top:1px}
+table.res td.pv.tot{background:rgba(255,176,46,.07)}
+table.res td.pv.zero{color:var(--faint)}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--panel);
+  border:1px solid var(--amber);color:var(--ink);padding:12px 20px;border-radius:10px;font-size:13px;
+  opacity:0;pointer-events:none;transition:.25s;z-index:50;font-family:var(--mono)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.spin{display:inline-block;width:13px;height:13px;border:2px solid var(--amber-dim);border-top-color:var(--amber);
+  border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px;margin-right:7px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.leg-vals th{font-size:9px}
+
+/* Modals */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.62);backdrop-filter:blur(3px);display:none;
+  align-items:center;justify-content:center;z-index:60;padding:20px}
+.modal.open{display:flex}
+.modal-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;width:540px;max-width:100%;
+  max-height:86vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.55)}
+.modal-card.wide{width:700px}
+.modal-h{display:flex;align-items:center;justify-content:space-between;padding:15px 20px;border-bottom:1px solid var(--line);background:var(--bg2)}
+.modal-h h3{font-size:13px;letter-spacing:2px;text-transform:uppercase;color:var(--ink);font-weight:700}
+.modal-x{background:none;border:none;color:var(--muted);font-size:17px;cursor:pointer;line-height:1}
+.modal-x:hover{color:var(--red)}
+.modal-b{padding:18px 20px;overflow:auto}
+.modal-f{display:flex;gap:10px;justify-content:flex-end;padding:13px 20px;border-top:1px solid var(--line);background:var(--bg2)}
+.f-lbl{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--faint);margin:15px 0 6px}
+.f-lbl:first-child{margin-top:0}
+.f-in,.f-area{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;color:var(--ink);
+  font-family:var(--sans);font-size:13px;padding:9px 11px}
+.f-in:focus,.f-area:focus{outline:none;border-color:var(--amber)}
+.f-area{resize:vertical;min-height:58px}
+.desc-box{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:11px 13px;
+  font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.75}
+.desc-box b{color:var(--amber)}
+.lib-card{background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:14px 16px;margin-bottom:11px}
+.lib-card:last-child{margin-bottom:0}
+.lib-card .top{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.lib-card .nm{font-size:15px;font-weight:700;color:var(--ink)}
+.lib-card .dt{font-family:var(--mono);font-size:10px;color:var(--faint);white-space:nowrap}
+.lib-card .meta{font-family:var(--mono);font-size:11px;color:var(--amber);margin:7px 0}
+.lib-card .note{font-size:12.5px;color:var(--muted);font-style:italic;margin:4px 0 9px;padding-left:10px;border-left:2px solid var(--line)}
+.lib-card .legs{font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.75;margin-bottom:11px}
+.lib-card .acts2{display:flex;gap:8px}
+.lib-card .acts2 .btn{flex:0;min-width:auto;padding:9px 18px;font-size:12px}
+.lib-empty{color:var(--faint);text-align:center;padding:34px 10px;font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">
+      <b>BETBUILDER<span>·</span>LAB</b>
+      <small>pattern backtester</small>
+    </div>
+    <div class="statusbar">
+      <div class="pill" id="st-leagues">LEAGUES <b>0</b></div>
+      <div class="pill" id="st-matches">MATCHES <b>0</b></div>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- LEFT: builder -->
+    <div style="display:flex;flex-direction:column;gap:20px">
+      <div class="panel">
+        <div class="panel-h"><span class="dot"></span><h2>Data — Leagues</h2></div>
+        <div class="panel-b">
+          <div class="drop" id="drop">
+            <div class="ico">📦</div>
+            <p><b>Ρίξε ZIP πρωταθλημάτων</b> ή .xlsx αγωνιστικών</p>
+            <p class="or">drag &amp; drop · ή</p>
+            <div style="display:flex;gap:8px;justify-content:center;margin-top:8px">
+              <button class="mini-btn" id="pick-files">ΕΠΙΛΟΓΗ ΑΡΧΕΙΩΝ</button>
+              <button class="mini-btn" id="pick-dir">ΕΠΙΛΟΓΗ ΦΑΚΕΛΟΥ</button>
+            </div>
+          </div>
+          <input type="file" id="file-in" multiple accept=".zip,.xlsx" hidden>
+          <input type="file" id="dir-in" webkitdirectory hidden>
+          <div class="leagues" id="leagues"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-h"><span class="dot"></span><h2>Pattern Builder</h2></div>
+        <div class="panel-b">
+          <div id="legs"></div>
+
+          <div class="ctrl-row" style="align-items:flex-start">
+            <label>Corners handicap<br><span class="hint">(φαβορί − / αουτσάιντερ +)</span></label>
+            <div>
+              <select class="odd-in" id="hcap" style="width:auto;padding-right:26px">
+                <option value="">— OFF</option>
+                <optgroup label="Φαβορί (−)">
+                  <option value="F0.5">Φαβορί −0.5</option>
+                  <option value="F1.5">Φαβορί −1.5</option>
+                  <option value="F2.5">Φαβορί −2.5</option>
+                  <option value="F3.5">Φαβορί −3.5</option>
+                  <option value="F4.5">Φαβορί −4.5</option>
+                  <option value="F5.5">Φαβορί −5.5</option>
+                </optgroup>
+                <optgroup label="Αουτσάιντερ (+)">
+                  <option value="U0.5">Αουτσάιντερ +0.5</option>
+                  <option value="U1.5">Αουτσάιντερ +1.5</option>
+                  <option value="U2.5">Αουτσάιντερ +2.5</option>
+                  <option value="U3.5">Αουτσάιντερ +3.5</option>
+                  <option value="U4.5">Αουτσάιντερ +4.5</option>
+                  <option value="U5.5">Αουτσάιντερ +5.5</option>
+                </optgroup>
+              </select>
+              <div class="hcap-expl" id="hcap-expl"></div>
+            </div>
+          </div>
+
+          <div class="ctrl-row" style="align-items:flex-start">
+            <label>Goals handicap<br><span class="hint">(φαβορί − / αουτσάιντερ +)</span></label>
+            <div>
+              <select class="odd-in" id="ghcap" style="width:auto;padding-right:26px">
+                <option value="">— OFF</option>
+                <optgroup label="Φαβορί (−)">
+                  <option value="F0.5">Φαβορί −0.5</option>
+                  <option value="F1.5">Φαβορί −1.5</option>
+                  <option value="F2.5">Φαβορί −2.5</option>
+                  <option value="F3.5">Φαβορί −3.5</option>
+                </optgroup>
+                <optgroup label="Αουτσάιντερ (+)">
+                  <option value="U0.5">Αουτσάιντερ +0.5</option>
+                  <option value="U1.5">Αουτσάιντερ +1.5</option>
+                  <option value="U2.5">Αουτσάιντερ +2.5</option>
+                  <option value="U3.5">Αουτσάιντερ +3.5</option>
+                </optgroup>
+              </select>
+              <div class="hcap-expl" id="ghcap-expl"></div>
+            </div>
+          </div>
+
+          <div class="ctrl-row">
+            <label>Ορισμός πλευράς</label>
+            <div class="seg" id="seg-side">
+              <button data-v="FAVORITE" class="on">FAVORITE</button>
+              <button data-v="UNDERDOG">UNDERDOG</button>
+              <button data-v="OFF">OFF</button>
+            </div>
+          </div>
+          <div class="ctrl-row">
+            <label>Μέση απόδοση (betbuilder)</label>
+            <input class="odd-in" id="avg-odd" value="151" inputmode="decimal">
+          </div>
+
+          <div class="ctrl-row">
+            <label>Εύρος απόδοσης φαβορί</label>
+            <div style="display:flex;align-items:center;gap:7px">
+              <input class="odd-in" id="fav-min" placeholder="από" inputmode="decimal" style="width:74px">
+              <span style="color:var(--faint);font-family:var(--mono)">—</span>
+              <input class="odd-in" id="fav-max" placeholder="έως" inputmode="decimal" style="width:74px">
+            </div>
+          </div>
+
+          <div class="warn" id="warn"></div>
+
+          <div class="actions">
+            <button class="btn run" id="run">▶ ΑΝΑΛΥΣΗ</button>
+            <button class="btn ghost" id="save">SAVE</button>
+            <button class="btn ghost" id="load">LOAD</button>
+            <button class="btn ghost" id="reset">RESET</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: results -->
+    <div class="panel">
+      <div class="panel-h"><span class="dot"></span><h2>Results &amp; Verdict</h2></div>
+      <div class="panel-b">
+        <div class="empty" id="empty">
+          <div class="big">📊</div>
+          <p>Φόρτωσε δεδομένα, όρισε το pattern και πάτα <b style="color:var(--amber)">ΑΝΑΛΥΣΗ</b>. Η ετυμηγορία κερδοφορίας και η κατανομή ανά εύρος αποδόσεων θα εμφανιστούν εδώ.</p>
+        </div>
+        <div id="results"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<!-- SAVE modal -->
+<div class="modal" id="save-modal">
+  <div class="modal-card">
+    <div class="modal-h"><h3>Αποθήκευση pattern</h3><button class="modal-x" data-close>✕</button></div>
+    <div class="modal-b">
+      <label class="f-lbl">Όνομα *</label>
+      <input class="f-in" id="save-name" placeholder="π.χ. Fav corners + HT lead">
+      <label class="f-lbl">Σχόλιο (προαιρετικό)</label>
+      <textarea class="f-area" id="save-note" placeholder="Σημειώσεις δικές σου..."></textarea>
+      <label class="f-lbl">Περιγραφή επιλογών</label>
+      <div class="desc-box" id="save-desc"></div>
+    </div>
+    <div class="modal-f">
+      <button class="btn ghost" data-close>Άκυρο</button>
+      <button class="btn run" id="save-confirm" style="flex:0">ΑΠΟΘΗΚΕΥΣΗ</button>
+    </div>
+  </div>
+</div>
+
+<!-- LIBRARY modal -->
+<div class="modal" id="lib-modal">
+  <div class="modal-card wide">
+    <div class="modal-h"><h3>Βιβλιοθήκη pattern</h3><button class="modal-x" data-close>✕</button></div>
+    <div class="modal-b" id="lib-list"></div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   CORE LOGIC — faithful port of BETBUILDER_RUNNER.py
+   ============================================================ */
+const COL = l => { let n=0; for(const c of l) n=n*26+(c.charCodeAt(0)-64); return n-1; }; // 'A'->0
+
+function normDiscrete(x){
+  if(x===null||x===undefined) return null;
+  let s=String(x).trim().toUpperCase();
+  if(["0","1","2","X"].includes(s)) return s;
+  let s2=s.replace(".0","");
+  if(["0","1","2"].includes(s2)) return s2;
+  return null;
+}
+function normFloat(x){
+  if(x===null||x===undefined||String(x).trim()==="") return null;
+  let s=String(x).trim().replace(",",".").replace(/[^0-9.\-eE]/g,"");
+  let v=parseFloat(s); return isNaN(v)?null:v;
+}
+function parseOp(raw){
+  if(raw===null||raw===undefined) return "";
+  let op=String(raw).trim().toUpperCase();
+  if(op==="") return "";
+  if(["=","==","IS"].includes(op)) return "=";
+  if(["!=","≠","IS NOT"].includes(op)) return "!=";
+  if(op==="OVER") return "OVER";
+  if(op==="UNDER") return "UNDER";
+  return "";
+}
+function normCat(s){
+  if(s===null||s===undefined) return "";
+  let k=String(s).trim().toUpperCase().replace(/\s+/g," ");
+  return k.replace("0,5","0.5").replace("1,5","1.5");
+}
+function swapDiscreteValue(v,doSwap){
+  let vv=normDiscrete(v);
+  if(!doSwap||vv===null) return vv;
+  return ({"1":"2","2":"1"})[vv]||vv;
+}
+function cmpDiscrete(actual,op,target){
+  let a=normDiscrete(actual),t=normDiscrete(target);
+  if(a===null||t===null||op==="") return false;
+  if(op==="=") return a===t;
+  if(op==="!=") return a!==t;
+  return false;
+}
+function cmpNumeric(actual,op,target){
+  let a=normFloat(actual),t=normFloat(target);
+  if(a===null||t===null||op==="") return false;
+  if(op==="OVER") return a>t;
+  if(op==="UNDER") return a<t;
+  if(op==="=") return Math.abs(a-t)<1e-9;
+  if(op==="!=") return Math.abs(a-t)>=1e-9;
+  return false;
+}
+
+const DISCRETE_LIST=[
+ "HALF-TIME RESULT (1/2/0)","SECOND HALF RESULT (1/2/0)","FULL-TIME RESULT (1/2/X)","FIRST TEAM TO SCORE (1/2/0)",
+ "FIRST CORNER WINNER (1/2/0)","1ST HALF CORNER WINNER (1/2/0)","CORNER WINNER MATCH (1/2/0)",
+ "BOTH TEAMS TO SCORE (1/0)","2ND HALF CORNER WINNER",
+ "FIRST 10 MINS CORNER WINNER (1/2/0)","FIRST 10 MINS CORNER WINNER",
+ "YELLOW CARDS FIRST HALF TIME RESULT (1/2/0)","YELLOW CARDS FIRST HALF RESULT",
+ "YELLOW CARDS 2ND HALF RESULT (1/2/0)","FIRST YELLOW CARD (1/2/0)",
+ "YELLOW CARDS MATCH RESULT (1/2/0)","YELLOW CARDS MATCH RESULT"];
+const DISCRETE_CATS=new Set(DISCRETE_LIST.map(normCat));
+
+const MAP={
+ "1ST HALF HOME GOALS":"H","1ST HALF AWAY GOALS":"I","2ND HALF HOME GOALS":"J","2ND HALF AWAY GOALS":"K",
+ "FULL-TIME HOME GOALS":"L","FULL-TIME AWAY GOALS":"M","FIRST TEAM TO SCORE (1/2/0)":"N",
+ "HALF-TIME RESULT (1/2/0)":"O","FULL-TIME RESULT (1/2/X)":"P","FIRST CORNER WINNER (1/2/0)":"Q",
+ "1ST HALF HOME CORNERS":"R","1ST HALF AWAY CORNERS":"S","2ND HALF HOME CORNERS":"T","2ND HALF AWAY CORNERS":"U",
+ "1ST HALF CORNER WINNER (1/2/0)":"V","CORNER WINNER MATCH (1/2/0)":"W","TOTAL CORNERS 1ST HALF":"X",
+ "TOTAL CORNERS MATCH":"Y","BOTH TEAMS TO SCORE (1/0)":"Z","TOTAL GOALS 1ST HALF":"AA","TOTAL GOALS 2ND HALF":"AB",
+ "FIRST 10 MINS CORNER WINNER (1/2/0)":"AI","FIRST 10 MINS CORNER WINNER":"AI",
+ "FIRST 10 MINS UNDER OVER 0.5":"AJ","FIRST 10 MINS UNDER OVER 0,5":"AJ",
+ "FIRST HALF HOME TEAM OVER UNDER YELLOWS":"AM","FIRST HALF AWAY TEAM OVER UNDER YELLOWS":"AN",
+ "SECOND HALF HOME TEAM OVER UNDER YELLOWS":"AO","SECOND HALF AWAY TEAM OVER UNDER YELLOWS":"AP",
+ "TOTAL YELLOWS 1ST HALF":"AQ","TOTAL YELLOWS MATCH":"AR","FIRST YELLOW CARD (1/2/0)":"AS",
+ "YELLOW CARDS FIRST HALF RESULT":"AT","YELLOW CARDS FIRST HALF TIME RESULT (1/2/0)":"AT",
+ "YELLOW CARDS 2ND HALF RESULT (1/2/0)":"AU",
+ "YELLOW CARDS MATCH RESULT":"AV","YELLOW CARDS MATCH RESULT (1/2/0)":"AV"
+};
+const MAP_N={}; for(const k in MAP) MAP_N[normCat(k)]=MAP[k];
+const SWAP_MAP={H:"I",I:"H",J:"K",K:"J",L:"M",M:"L",R:"S",S:"R",T:"U",U:"T",AM:"AN",AN:"AM",AO:"AP",AP:"AO"};
+
+function getActual(cat,row,swap){
+  const cn=normCat(cat);
+  if(cn===normCat("SECOND HALF RESULT (1/2/0)")){
+    let j=normFloat(row.J), k=normFloat(row.K);
+    if(j===null){ const l=normFloat(row.L),h=normFloat(row.H); if(l!==null&&h!==null) j=l-h; }
+    if(k===null){ const mm=normFloat(row.M),i=normFloat(row.I); if(mm!==null&&i!==null) k=mm-i; }
+    if(j===null||k===null) return null;
+    if(Math.abs(j-k)<1e-9) return "0";
+    return j>k?"1":"2";
+  }
+  if(cn===normCat("SECOND HALF FAVOURITE GOALS")||cn===normCat("SECOND HALF UNDERDOG GOALS")){
+    const oh=normFloat(row.E), oa=normFloat(row.G);
+    if(oh===null||oa===null||oh===oa) return null;
+    const favHome=oh<oa;
+    let j=normFloat(row.J), k=normFloat(row.K);
+    if(j===null){ const l=normFloat(row.L),h=normFloat(row.H); if(l!==null&&h!==null) j=l-h; }
+    if(k===null){ const mm=normFloat(row.M),i=normFloat(row.I); if(mm!==null&&i!==null) k=mm-i; }
+    if(j===null||k===null) return null;
+    const favG=favHome?j:k, dogG=favHome?k:j;
+    return cn===normCat("SECOND HALF FAVOURITE GOALS")?favG:dogG;
+  }
+  if(cn===normCat("2ND HALF CORNER WINNER")){
+    let h2=normFloat(row.T),a2=normFloat(row.U);
+    if(h2===null||a2===null) return null;
+    if(Math.abs(h2-a2)<1e-9) return "0";
+    return h2>a2?"1":"2";
+  }
+  if(cn===normCat("HOME CORNERS TOTAL")||cn===normCat("AWAY CORNERS TOTAL")){
+    let hT=(normFloat(row.R)||0)+(normFloat(row.T)||0);
+    let aT=(normFloat(row.S)||0)+(normFloat(row.U)||0);
+    if(cn===normCat("HOME CORNERS TOTAL")) return swap?aT:hT;
+    return swap?hT:aT;
+  }
+  let col=MAP_N[cn]; if(!col) return null;
+  if(swap&&SWAP_MAP[col]) col=SWAP_MAP[col];
+  return row[col];
+}
+function determineSwap(defineHome,oh,oa){
+  if(!["FAVORITE","UNDERDOG"].includes(defineHome)) return false;
+  let a=normFloat(oh),b=normFloat(oa);
+  if(a===null||b===null) return false;
+  let favHome=a<b;
+  return defineHome==="FAVORITE"? !favHome : favHome;
+}
+function roundFromName(name){
+  let m=String(name).match(/[Rr]ound[ _\-]*([0-9]+)/);
+  return m?parseInt(m[1]):null;
+}
+function shortCat(c){return String(c).replace(" (1/2/0)","").replace(" (1/2/X)","").replace(" (1/0)","");}
+
+/* parse one xlsx (arraybuffer) into match rows */
+function parseMeta(fname){
+  const f=String(fname).toLowerCase();
+  let country=(f.match(/^([a-z]+)/)||[])[1]||"";
+  country=country?country.toUpperCase():"—";
+  let season="—", m;
+  if(m=f.match(/(\d{4})\D+(\d{4})/)) season=m[1]+"-"+m[2];
+  else if(m=f.match(/(?:^|\D)(\d{2})\D(\d{2})(?!\d)/)) season="20"+m[1]+"-20"+m[2];
+  else if(m=f.match(/(\d{4})/)) season=m[1];
+  return {country,season};
+}
+let HEADERS={};
+function captureHeaders(hr){
+  if(!hr) return;
+  for(let j=0;j<52;j++){ const n=hr[j]; if(n!=null && String(n).trim()!=="") HEADERS[colLetter(j)]=String(n).trim(); }
+}
+function parseSheet(buf,fname){
+  const wb=XLSX.read(buf,{type:"array"});
+  const out=[];
+  const firstOnly=[wb.SheetNames[0]];
+  firstOnly.forEach(sn=>{
+    const ws=wb.Sheets[sn];
+    const aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});
+    if(aoa.length<2) return;
+    captureHeaders(aoa[0]);
+    const data=aoa.slice(1); // drop header row
+    const maxCols=52;
+    for(let i=0;i<data.length;i++){
+      const r=data[i]; if(!r) continue;
+      const row={};
+      for(let j=0;j<maxCols;j++){
+        let v=r[j]; row[colLetter(j)] = (v===undefined||v===null||v==="")?null:v;
+      }
+      if(!row.C||!row.D) continue; // need HOME & AWAY
+      // yellow shift (+11 rows) — kept for fidelity
+      const sft=(letter)=>{ let idx=COL(letter), rr=i+11; let rrow=data[rr];
+        if(!rrow) return null; let v=rrow[idx]; return (v===undefined||v===null||v==="")?null:v; };
+      row._AD_shift=sft("AD"); row._AE_shift=sft("AE");
+      row._round = roundFromName(fname); if(row._round===null && row.A!=null) row._round=normFloat(row.A);
+      row._file=fname;
+      const meta=parseMeta(fname); row._country=meta.country; row._season=meta.season;
+      out.push(row);
+    }
+  });
+  return out;
+}
+function colLetter(j){let s="";j+=1;while(j>0){let m=(j-1)%26;s=String.fromCharCode(65+m)+s;j=Math.floor((j-1)/26);}return s;}
+
+/* run analysis */
+const RANGES=[[1.01,1.40],[1.41,1.80],[1.81,2.20],[2.21,2.80]];
+function analyze(matches,legs,defineHome,avgOdd,favMin,favMax){
+  const stake=1.0, ao=normFloat(avgOdd)||0;
+  const rows=[]; const usage={}; legs.forEach(l=>usage[l.cat]=0);
+  for(const m of matches){
+    const oh=m.E,od=m.F,oa=m.G;
+    // favourite odd + range filter
+    const foh0=normFloat(oh), foa0=normFloat(oa);
+    const favHome=(foh0!==null&&foa0!==null)?(foh0<foa0):null;
+    const favOdd=(favHome===null)?null:(favHome?foh0:foa0);
+    if(favMin!=null && (favOdd===null || favOdd<favMin-1e-9)) continue;
+    if(favMax!=null && (favOdd===null || favOdd>favMax+1e-9)) continue;
+    const swap=determineSwap(defineHome,oh,oa);
+    let allOk=true, missingData=false; const acts={};
+    for(const leg of legs){
+      if(leg.cornersH!==undefined){
+        // Corners handicap: favourite (−h) or underdog (+h), total match corners
+        const foh=normFloat(oh), foa=normFloat(oa);
+        let legOk=false, scoreStr="–";
+        if(foh!==null && foa!==null && foh!==foa){
+          const favIsHome=foh<foa;
+          if(normFloat(m.R)===null&&normFloat(m.T)===null&&normFloat(m.S)===null&&normFloat(m.U)===null) missingData=true;
+          const homeTot=(normFloat(m.R)||0)+(normFloat(m.T)||0);
+          const awayTot=(normFloat(m.S)||0)+(normFloat(m.U)||0);
+          const favTot=favIsHome?homeTot:awayTot;
+          const dogTot=favIsHome?awayTot:homeTot;
+          const h=leg.cornersH.h;
+          if(leg.cornersH.side==="F"){ const eff=favTot-h; legOk=eff>dogTot; scoreStr=`${eff}-${dogTot}`; }
+          else { const eff=dogTot+h; legOk=eff>favTot; scoreStr=`${favTot}-${eff}`; }
+          usage["CORNERS HANDICAP"]++;
+        }
+        allOk=allOk&&legOk;
+        acts["CORNERS HANDICAP"]=scoreStr;
+        continue;
+      }
+      if(leg.goalsH!==undefined){
+        // Goals handicap: favourite (−h) or underdog (+h), full-time goals
+        const foh=normFloat(oh), foa=normFloat(oa);
+        let legOk=false, scoreStr="–";
+        if(foh!==null && foa!==null && foh!==foa){
+          const favIsHome=foh<foa;
+          const lg=normFloat(m.L), mg=normFloat(m.M); // full-time home / away goals
+          if(lg!==null && mg!==null){
+            const favG=favIsHome?lg:mg, dogG=favIsHome?mg:lg, h=leg.goalsH.h;
+            if(leg.goalsH.side==="F"){ const eff=favG-h; legOk=eff>dogG; scoreStr=`${eff}-${dogG}`; }
+            else { const eff=dogG+h; legOk=eff>favG; scoreStr=`${favG}-${eff}`; }
+            usage["GOALS HANDICAP"]++;
+          } else missingData=true;
+        }
+        allOk=allOk&&legOk;
+        acts["GOALS HANDICAP"]=scoreStr;
+        continue;
+      }
+      const raw=getActual(leg.cat,m,false);
+      let actual=getActual(leg.cat,m,swap);
+      const disc=DISCRETE_CATS.has(normCat(leg.cat));
+      if(disc) actual=swapDiscreteValue(actual,swap);
+      if(raw!==null && raw!==undefined) usage[leg.cat]++;
+      if(actual===null&&(leg.op1!==""||leg.op2!=="")) missingData=true;
+      const ok1=disc?cmpDiscrete(actual,leg.op1,leg.val1):cmpNumeric(actual,leg.op1,leg.val1);
+      const ok2=disc?cmpDiscrete(actual,leg.op2,leg.val2):cmpNumeric(actual,leg.op2,leg.val2);
+      const legOk=(ok1||leg.op1==="")&&(ok2||leg.op2==="");
+      allOk=allOk&&legOk;
+      acts[shortCat(leg.cat)] = disc ? raw : actual; // summary value (favorite-persp for numeric)
+    }
+    if(missingData) continue; // ελλιπη δεδομενα -> εκτος δειγματος (οχι "χαμενο")
+    const won=allOk;
+    const pnl = won ? stake*(ao-1) : -stake;
+    rows.push({round:m._round, teams:`${m.C} vs ${m.D}`, oh,od,oa, favHome, favOdd, won, pnl, acts, file:m._file, country:m._country, season:m._season, raw:m});
+  }
+  // sort by round, teams
+  rows.sort((a,b)=>{
+    let ra=a.round==null?9e9:a.round, rb=b.round==null?9e9:b.round;
+    if(ra!==rb) return ra-rb; return a.teams<b.teams?-1:a.teams>b.teams?1:0;
+  });
+  let eq=0; rows.forEach(r=>{eq+=r.pnl; r.equity=eq;});
+  const wins=rows.filter(r=>r.won).length, bets=rows.length, losses=bets-wins;
+  const pnlTotal=rows.reduce((s,r)=>s+r.pnl,0);
+  // buckets
+  const buckets=RANGES.map(([lo,hi])=>({lo,hi,bets:0,wins:0,pnl:0}));
+  for(const r of rows){
+    if(r.favOdd===null) continue;
+    for(const b of buckets){ if(r.favOdd>=b.lo-1e-9 && r.favOdd<=b.hi+1e-9){ b.bets++; if(r.won)b.wins++; b.pnl+=r.pnl; break; } }
+  }
+  // breakdowns
+  const byLeague={}, byCountry={}, bySeason={};
+  const bump=(map,k,r)=>{ k=k||"—"; (map[k]=map[k]||{bets:0,wins:0,pnl:0}); map[k].bets++; if(r.won)map[k].wins++; map[k].pnl+=r.pnl; };
+  for(const r of rows){ bump(byLeague,leagueOf(r.file),r); bump(byCountry,r.country,r); bump(bySeason,r.season,r); }
+  // unsupported legs (never had data)
+  const unsupported=legs.filter(l=>usage[l.cat]===0).map(l=>l.cat);
+  return {rows,wins,bets,losses,pnl:pnlTotal,ao,buckets,byLeague,byCountry,bySeason,unsupported,legs,side:defineHome,favMin,favMax};
+}
+
+/* ============================================================
+   CLOSE-MISS ENGINE — per-minute reconstruction (Sofascore only)
+   Ξαναχτίζει «εικονική γραμμή» σε κάθε λεπτό του παραθύρου από τα
+   χρονολόγια κόρνερ (AW) & γκολ (AY) και τρέχει την ΙΔΙΑ αξιολόγηση.
+   • Παράθυρο: 75′→τέλος (ή 30′→45′ αν ΟΛΑ τα legs είναι 1ου ημιχρόνου)
+   • Section A «ΚΕΡΔΙΖΑΝ & ΕΧΑΣΑΝ»: ήττα που ΗΤΑΝ πλήρως πράσινη σε λεπτό του παραθύρου
+   • Section B «ΒΡΕΘΗΚΑΝ ΚΟΝΤΑ»: ήττα που σε λεπτό του παραθύρου έλειπε ΑΚΡΙΒΩΣ 1
+     (1 κόρνερ ή 1 γκολ) για να γίνει πράσινη
+   ============================================================ */
+function jres120(h,a){ return h>a?"1":(a>h?"2":"0"); }
+function jres12X(h,a){ return h>a?"1":(a>h?"2":"X"); }
+function hasMarkers(s){ return typeof s==="string" && /'\(/.test(s); }
+function parseTL(s){
+  const out=[]; if(!hasMarkers(s)) return out;
+  const re=/(\d+)(?:\+(\d+))?'\(([HA])\)/g; let m;
+  while((m=re.exec(s))){
+    const base=parseInt(m[1],10), extra=m[2]?parseInt(m[2],10):0, side=m[3];
+    let period,eff;
+    if(base>=90){ period="2ND"; eff=90+extra; }
+    else if(extra>0 && base===45){ period="1ST"; eff=45+extra; }
+    else if(base<=45){ period="1ST"; eff=base; }
+    else { period="2ND"; eff=base; }
+    out.push({period,eff,side});
+  }
+  return out;
+}
+function effLabel(eff,period){
+  if(period==="1ST") return eff>45?`45+${eff-45}'`:`${eff}'`;
+  return eff>90?`90+${eff-90}'`:`${eff}'`;
+}
+// πρώτο γεγονός (κόρνερ ή γκολ) από χρονολόγιο -> {period,eff,side} ή null
+function firstEvt(tlStr){
+  const ev=parseTL(tlStr); if(!ev.length) return null;
+  const ord=e=>(e.period==="1ST"?0:100000)+e.eff;
+  let best=ev[0]; for(const e of ev) if(ord(e)<ord(best)) best=e;
+  return best;
+}
+function firstEvtTeam(side){ return side==="H"?"Γηπεδ.":"Φιλοξ."; }
+// επιστρέφει " (12′ Γηπεδ.)" για FIRST CORNER/FIRST GOAL, αλλιώς ""
+function firstEvtSuffix(m,cat){
+  const cn=normCat(cat);
+  if(cn===normCat("FIRST CORNER WINNER (1/2/0)")){ const e=firstEvt(m&&m.AW); return e?` (${effLabel(e.eff,e.period)} ${firstEvtTeam(e.side)})`:""; }
+  if(cn===normCat("FIRST TEAM TO SCORE (1/2/0)")){ const e=firstEvt(m&&m.AY); return e?` (${effLabel(e.eff,e.period)} ${firstEvtTeam(e.side)})`:""; }
+  return "";
+}
+// συγκεντρωτικό σημείωμα 1ου κόρνερ/γκολ για ένα ματς, αν το pattern τα περιέχει
+function firstEvtNote(m,legs){
+  const out=[];
+  const hasFC=legs.some(l=>normCat(l.cat)===normCat("FIRST CORNER WINNER (1/2/0)"));
+  const hasFG=legs.some(l=>normCat(l.cat)===normCat("FIRST TEAM TO SCORE (1/2/0)"));
+  if(hasFC){ const e=firstEvt(m&&m.AW); if(e) out.push(`1ο 🚩 ${effLabel(e.eff,e.period)} ${firstEvtTeam(e.side)}`); }
+  if(hasFG){ const e=firstEvt(m&&m.AY); if(e) out.push(`1ο ⚽ ${effLabel(e.eff,e.period)} ${firstEvtTeam(e.side)}`); }
+  return out.join(" · ");
+}
+const FH_CATS=new Set([
+ "1ST HALF HOME GOALS","1ST HALF AWAY GOALS","HALF-TIME RESULT (1/2/0)","TOTAL GOALS 1ST HALF",
+ "1ST HALF HOME CORNERS","1ST HALF AWAY CORNERS","1ST HALF CORNER WINNER (1/2/0)","TOTAL CORNERS 1ST HALF",
+ "FIRST CORNER WINNER (1/2/0)","FIRST TEAM TO SCORE (1/2/0)","FIRST 10 MINS CORNER WINNER","FIRST 10 MINS UNDER OVER 0.5"
+].map(normCat));
+function isFirstHalfWindow(legs){
+  if(!legs.length) return false;
+  for(const l of legs){
+    if(l.cornersH!==undefined||l.goalsH!==undefined) return false;
+    if(!FH_CATS.has(normCat(l.cat))) return false;
+  }
+  return true;
+}
+function snapshotTallies(events,period,cutoffEff){
+  let hg1=0,ag1=0,hg2=0,ag2=0,hc1=0,ac1=0,hc2=0,ac2=0,fG=null,fC=null;
+  const sorted=events.slice().sort((a,b)=>((a.period==="1ST"?0:1)-(b.period==="1ST"?0:1))||(a.eff-b.eff));
+  for(const e of sorted){
+    let inc;
+    if(e.period==="1ST") inc = (period==="2ND") ? true : (e.eff<=cutoffEff);
+    else inc = (period==="2ND") ? (e.eff<=cutoffEff) : false;
+    if(!inc) continue;
+    if(e.kind==="G"){ if(e.period==="1ST"){ if(e.side==="H")hg1++; else ag1++; } else { if(e.side==="H")hg2++; else ag2++; } if(fG===null)fG=e.side; }
+    else { if(e.period==="1ST"){ if(e.side==="H")hc1++; else ac1++; } else { if(e.side==="H")hc2++; else ac2++; } if(fC===null)fC=e.side; }
+  }
+  return {hg1,ag1,hg2,ag2,hc1,ac1,hc2,ac2,fG,fC};
+}
+function deriveRow(m,T){
+  const fh=T.hg1+T.hg2, fa=T.ag1+T.ag2;
+  const v=Object.assign({},m);
+  v.H=T.hg1; v.I=T.ag1; v.J=T.hg2; v.K=T.ag2; v.L=fh; v.M=fa;
+  v.N=T.fG?(T.fG==="H"?"1":"2"):"0";
+  v.O=jres120(T.hg1,T.ag1); v.P=jres12X(fh,fa);
+  v.Z=(fh>0&&fa>0)?"1":"0"; v.AA=T.hg1+T.ag1; v.AB=T.hg2+T.ag2;
+  v.R=T.hc1; v.S=T.ac1; v.T=T.hc2; v.U=T.ac2;
+  v.Q=T.fC?(T.fC==="H"?"1":"2"):"0";
+  v.V=jres120(T.hc1,T.ac1); v.W=jres120(T.hc1+T.hc2,T.ac1+T.ac2);
+  v.X=T.hc1+T.ac1; v.Y=T.hc1+T.hc2+T.ac1+T.ac2;
+  return v;
+}
+function perturbTallies(T,kind,side,period){
+  const t=Object.assign({},T);
+  if(period==="2ND"){
+    if(kind==="C"){ if(side==="H")t.hc2++; else t.ac2++; } else { if(side==="H")t.hg2++; else t.ag2++; }
+  }else{
+    if(kind==="C"){ if(side==="H")t.hc1++; else t.ac1++; } else { if(side==="H")t.hg1++; else t.ag1++; }
+  }
+  if(kind==="G"&&t.fG===null) t.fG=side;
+  if(kind==="C"&&t.fC===null) t.fC=side;
+  return t;
+}
+function evalCornersH(leg,m,oh,oa){
+  const foh=normFloat(oh), foa=normFloat(oa);
+  if(foh===null||foa===null||foh===foa) return false;
+  const favIsHome=foh<foa;
+  const homeTot=(normFloat(m.R)||0)+(normFloat(m.T)||0);
+  const awayTot=(normFloat(m.S)||0)+(normFloat(m.U)||0);
+  const favTot=favIsHome?homeTot:awayTot, dogTot=favIsHome?awayTot:homeTot, h=leg.cornersH.h;
+  if(leg.cornersH.side==="F") return (favTot-h)>dogTot;
+  return (dogTot+h)>favTot;
+}
+function evalGoalsH(leg,m,oh,oa){
+  const foh=normFloat(oh), foa=normFloat(oa);
+  if(foh===null||foa===null||foh===foa) return false;
+  const favIsHome=foh<foa;
+  const lg=normFloat(m.L), mg=normFloat(m.M);
+  if(lg===null||mg===null) return false;
+  const favG=favIsHome?lg:mg, dogG=favIsHome?mg:lg, h=leg.goalsH.h;
+  if(leg.goalsH.side==="F") return (favG-h)>dogG;
+  return (dogG+h)>favG;
+}
+function evalLegsState(legs,v,oh,oa,side){
+  const swap=determineSwap(side,oh,oa);
+  for(const leg of legs){
+    let legOk;
+    if(leg.cornersH!==undefined){ legOk=evalCornersH(leg,v,oh,oa); }
+    else if(leg.goalsH!==undefined){ legOk=evalGoalsH(leg,v,oh,oa); }
+    else{
+      let actual=getActual(leg.cat,v,swap);
+      const disc=DISCRETE_CATS.has(normCat(leg.cat));
+      if(disc) actual=swapDiscreteValue(actual,swap);
+      const ok1=disc?cmpDiscrete(actual,leg.op1,leg.val1):cmpNumeric(actual,leg.op1,leg.val1);
+      const ok2=disc?cmpDiscrete(actual,leg.op2,leg.val2):cmpNumeric(actual,leg.op2,leg.val2);
+      legOk=(ok1||leg.op1==="")&&(ok2||leg.op2==="");
+    }
+    if(!legOk) return false;
+  }
+  return true;
+}
+const CM_PERTS=[["C","H","+1 κόρνερ γηπεδ."],["C","A","+1 κόρνερ φιλοξ."],["G","H","+1 γκολ γηπεδ."],["G","A","+1 γκολ φιλοξ."]];
+function makeCM(r,m,events,period){
+  return function(snaps){
+    const mins=snaps.map(s=>s.min);
+    const firstMin=Math.min(...mins), lastMin=Math.max(...mins);
+    const anchor=snaps[snaps.length-1]; // headline = τελευταία στιγμή (σημείο που «έφυγε» / τελευταία αντίδραση)
+    const tl=events.filter(e=>e.period===period && e.eff>=firstMin)
+      .sort((a,b)=>a.eff-b.eff)
+      .map(e=>{ const T=snapshotTallies(events,period,e.eff);
+        return {eff:e.eff,kind:e.kind,side:e.side,fh:T.hg1+T.hg2,fa:T.ag1+T.ag2,hc:T.hc1+T.hc2,ac:T.ac1+T.ac2}; });
+    return {r,period,firstMin,lastMin,anchor,snaps,tl};
+  };
+}
+function computeCloseMisses(res){
+  const A=[],B=[]; let losses=0, excluded=0;
+  const fhWindow=isFirstHalfWindow(res.legs);
+  const period=fhWindow?"1ST":"2ND";
+  const startMin=fhWindow?30:75;
+  for(const r of res.rows){
+    if(r.won) continue;
+    losses++;
+    const m=r.raw||{};
+    const finalG=(normFloat(m.L)||0)+(normFloat(m.M)||0);
+    const finalC=(normFloat(m.R)||0)+(normFloat(m.S)||0)+(normFloat(m.T)||0)+(normFloat(m.U)||0);
+    const cornerOk=hasMarkers(m.AW)||finalC===0;
+    const goalOk=hasMarkers(m.AY)||finalG===0;
+    if(!(cornerOk&&goalOk)){ excluded++; continue; } // χωρίς χρονολόγιο (π.χ. TotalCorner) → εξαιρείται
+    const events=[];
+    parseTL(m.AW).forEach(e=>{e.kind="C";events.push(e);});
+    parseTL(m.AY).forEach(e=>{e.kind="G";events.push(e);});
+    const wmins=Array.from(new Set(events.filter(e=>e.period===period&&e.eff>=startMin).map(e=>e.eff))).sort((a,b)=>a-b);
+    const mins=[startMin].concat(wmins.filter(x=>x>startMin));
+    const greens=[],closes=[];
+    for(const c of mins){
+      const T=snapshotTallies(events,period,c);
+      const v=deriveRow(m,T);
+      const snap={min:c,fh:T.hg1+T.hg2,fa:T.ag1+T.ag2,hc:T.hc1+T.hc2,ac:T.ac1+T.ac2};
+      if(evalLegsState(res.legs,v,r.oh,r.oa,res.side)){ greens.push(snap); }
+      else{
+        for(const [k,sd,lbl] of CM_PERTS){
+          const v2=deriveRow(m,perturbTallies(T,k,sd,period));
+          if(evalLegsState(res.legs,v2,r.oh,r.oa,res.side)){ closes.push(Object.assign({miss:lbl},snap)); break; }
+        }
+      }
+    }
+    const mk=makeCM(r,m,events,period);
+    if(greens.length) A.push(mk(greens));
+    else if(closes.length) B.push(mk(closes));
+  }
+  const sorter=(a,b)=>{ const ra=a.r.round==null?9e9:a.r.round, rb=b.r.round==null?9e9:b.r.round; return ra!==rb?ra-rb:(a.r.teams<b.r.teams?-1:1); };
+  A.sort(sorter); B.sort(sorter);
+  return {A,B,losses,excluded,fhWindow,startMin,period};
+}
+
+/* ============================================================
+   STATE + UI
+   ============================================================ */
+const CATS=[
+ ["GOALS & RESULT",[
+   ["1ST HALF HOME GOALS",false],["1ST HALF AWAY GOALS",false],
+   ["2ND HALF HOME GOALS",false],["2ND HALF AWAY GOALS",false],
+   ["FULL-TIME HOME GOALS",false],["FULL-TIME AWAY GOALS",false],
+   ["FIRST TEAM TO SCORE (1/2/0)",true],["HALF-TIME RESULT (1/2/0)",true],
+   ["SECOND HALF RESULT (1/2/0)",true],
+   ["SECOND HALF FAVOURITE GOALS",false],["SECOND HALF UNDERDOG GOALS",false],
+   ["FULL-TIME RESULT (1/2/X)",true],["BOTH TEAMS TO SCORE (1/0)",true],
+   ["TOTAL GOALS 1ST HALF",false],["TOTAL GOALS 2ND HALF",false],
+ ]],
+ ["CORNERS",[
+   ["FIRST CORNER WINNER (1/2/0)",true],["FIRST 10 MINS CORNER WINNER",true],
+   ["FIRST 10 MINS UNDER OVER 0.5",false],
+   ["1ST HALF HOME CORNERS",false],["1ST HALF AWAY CORNERS",false],
+   ["2ND HALF HOME CORNERS",false],["2ND HALF AWAY CORNERS",false],
+   ["1ST HALF CORNER WINNER (1/2/0)",true],["CORNER WINNER MATCH (1/2/0)",true],
+   ["2ND HALF CORNER WINNER",true],
+   ["TOTAL CORNERS 1ST HALF",false],["TOTAL CORNERS MATCH",false],
+   ["HOME CORNERS TOTAL",false],["AWAY CORNERS TOTAL",false],
+ ]],
+ ["YELLOWS / OTHER",[
+   ["FIRST HALF HOME TEAM OVER UNDER YELLOWS",false],["FIRST HALF AWAY TEAM OVER UNDER YELLOWS",false],
+   ["SECOND HALF HOME TEAM OVER UNDER YELLOWS",false],["SECOND HALF AWAY TEAM OVER UNDER YELLOWS",false],
+   ["TOTAL YELLOWS 1ST HALF",false],["TOTAL YELLOWS MATCH",false],
+   ["FIRST YELLOW CARD (1/2/0)",true],
+   ["YELLOW CARDS FIRST HALF RESULT",true],["YELLOW CARDS 2ND HALF RESULT (1/2/0)",true],["YELLOW CARDS MATCH RESULT",true],
+ ]],
+];
+const DEFAULT_PATTERN={
+ "HALF-TIME RESULT (1/2/0)":{op1:"=",val1:"1"},
+ "1ST HALF HOME CORNERS":{op1:"OVER",val1:"3.5"},
+ "1ST HALF AWAY CORNERS":{op1:"UNDER",val1:"1.5"},
+ "HOME CORNERS TOTAL":{op1:"UNDER",val1:"6.5"},
+ "AWAY CORNERS TOTAL":{op1:"OVER",val1:"3.5"},
+};
+let LEAGUES=[]; // {name, matches:[]}
+let SIDE="FAVORITE";
+
+function leagueOf(file){ const lg=LEAGUES.find(l=>l.matches.some(m=>m._file===file)); return lg?lg.name:file; }
+
+/* build pattern UI */
+function sideLabel(label,side){
+  if(side==="FAVORITE") return label.replace(/HOME/g,"FAVOURITE").replace(/AWAY/g,"UNDERDOG");
+  if(side==="UNDERDOG") return label.replace(/HOME/g,"UNDERDOG").replace(/AWAY/g,"FAVOURITE");
+  return label;
+}
+function relabelLegs(){
+  document.querySelectorAll(".leg").forEach(row=>{
+    const t=sideLabel(row.dataset.base,SIDE);
+    const lbl=row.querySelector(".lbl"); lbl.textContent=t; lbl.title=t;
+  });
+}
+function discOps(){return `<option value="">—</option><option value="=">=</option><option value="≠">≠</option>`;}
+function numOps(){return `<option value="">—</option><option value="OVER">OVER</option><option value="UNDER">UNDER</option><option value="=">=</option><option value="≠">≠</option>`;}
+function discDomain(cat){
+  const c=cat.toUpperCase();
+  if(c.includes("1/2/X")) return ["1","X","2"];
+  if(c.includes("1/0")) return ["1","0"];
+  return ["1","2","0"];
+}
+function fmtNum(v){ return (Math.round(v*10)/10).toString(); }
+function refreshRow(row){
+  const op1=row.querySelector(".op1"),op2=row.querySelector(".op2");
+  const v1=row.querySelector(".v1"),v2=row.querySelector(".v2");
+  const on=(op1.value!=="")||(op2.value!=="");
+  row.classList.toggle("active",on);
+  [op1,op2].forEach(s=>s.classList.toggle("set",s.value!==""));
+  v1.closest(".stp").classList.toggle("set",v1.value.trim()!=="");
+  v2.closest(".stp").classList.toggle("set",v2.value.trim()!=="");
+  const st=row.querySelector(".status");
+  st.textContent=on?"+":"−"; st.classList.toggle("on",on);
+}
+function stepValue(row,which,dir){
+  const disc=row.dataset.disc==="1";
+  const inp=row.querySelector("."+which);
+  const opSel=row.querySelector(which==="v1"?".op1":".op2");
+  if(disc){
+    const dom=row.dataset.domain.split(",");
+    const cur=inp.value.trim().toUpperCase();
+    let i=dom.indexOf(cur);
+    if(i<0) i = dir>0 ? -1 : 0;
+    i=(i+dir+dom.length)%dom.length;
+    inp.value=dom[i];
+    if(opSel.value==="") opSel.value="=";
+  }else{
+    let v=parseFloat(inp.value.replace(",","."));
+    if(isNaN(v)) v=0.5; else v=v+dir*0.5;
+    if(v<0) v=0;
+    inp.value=fmtNum(v);
+    if(opSel.value==="") opSel.value="OVER";
+  }
+  refreshRow(row);
+}
+function buildLegs(){
+  const host=document.getElementById("legs"); host.innerHTML="";
+  CATS.forEach(([grp,items])=>{
+    const t=document.createElement("div"); t.className="grp-title"; t.textContent=grp; host.appendChild(t);
+    items.forEach(([cat,disc])=>{
+      const d=DEFAULT_PATTERN[cat]||{};
+      const row=document.createElement("div"); row.className="leg"; row.dataset.cat=cat; row.dataset.disc=disc?"1":"0";
+      row.dataset.base=shortCat(cat);
+      if(disc) row.dataset.domain=discDomain(cat).join(",");
+      const ops=disc?discOps():numOps();
+      const ph=disc?"–":"–";
+      const dispLbl=sideLabel(shortCat(cat),SIDE);
+      row.innerHTML=`
+        <button class="status" title="πάτα το πράσινο + για reset αυτού του πεδίου">−</button>
+        <div class="lbl" title="${dispLbl}">${dispLbl}</div>
+        <select class="op1">${ops}</select>
+        <div class="stp"><button class="dec" data-w="v1">−</button><input class="v1" placeholder="${ph}" inputmode="decimal"><button class="inc" data-w="v1">+</button></div>
+        <select class="op2">${ops}</select>
+        <div class="stp"><button class="dec" data-w="v2">−</button><input class="v2" placeholder="${ph}" inputmode="decimal"><button class="inc" data-w="v2">+</button></div>`;
+      host.appendChild(row);
+      const op1=row.querySelector(".op1"),v1=row.querySelector(".v1"),op2=row.querySelector(".op2"),v2=row.querySelector(".v2");
+      if(d.op1){op1.value=d.op1==="!="?"≠":d.op1; v1.value=d.val1||"";}
+      [op1,v1,op2,v2].forEach(el=>el.addEventListener("input",()=>refreshRow(row)));
+      row.querySelectorAll(".dec").forEach(b=>b.addEventListener("click",()=>stepValue(row,b.dataset.w,-1)));
+      row.querySelectorAll(".inc").forEach(b=>b.addEventListener("click",()=>stepValue(row,b.dataset.w,+1)));
+      row.querySelector(".status").addEventListener("click",()=>{
+        if(!row.classList.contains("active")) return;
+        op1.value="";v1.value="";op2.value="";v2.value="";refreshRow(row);
+      });
+      refreshRow(row);
+    });
+  });
+}
+function readPattern(){
+  const legs=[];
+  document.querySelectorAll(".leg").forEach(row=>{
+    const cat=row.dataset.cat;
+    const op1=parseOp(row.querySelector(".op1").value), v1=row.querySelector(".v1").value.trim();
+    const op2=parseOp(row.querySelector(".op2").value), v2=row.querySelector(".v2").value.trim();
+    if(op1===""&&op2==="") return;
+    legs.push({cat,op1,val1:v1,op2,val2:v2});
+  });
+  return legs;
+}
+function loadPatternObj(obj){
+  document.querySelectorAll(".leg").forEach(row=>{
+    const cat=row.dataset.cat, d=obj.pattern&&obj.pattern[cat];
+    const op1=row.querySelector(".op1"),v1=row.querySelector(".v1"),op2=row.querySelector(".op2"),v2=row.querySelector(".v2");
+    op1.value=""; v1.value=""; op2.value=""; v2.value="";
+    if(d){ if(d.op1){op1.value=d.op1==="!="?"≠":d.op1;v1.value=d.val1||"";}
+           if(d.op2){op2.value=d.op2==="!="?"≠":d.op2;v2.value=d.val2||"";} }
+    refreshRow(row);
+  });
+  if(obj.side){SIDE=obj.side; document.querySelectorAll("#seg-side button").forEach(b=>b.classList.toggle("on",b.dataset.v===SIDE));}
+  relabelLegs();
+  if(obj.avgOdd!=null) document.getElementById("avg-odd").value=obj.avgOdd;
+  let hc=obj.hcap||""; if(hc && !/^[FU]/.test(hc)) hc="U"+hc;
+  document.getElementById("hcap").value = hc; refreshHcap();
+  document.getElementById("ghcap").value = obj.ghcap||""; refreshGhcap();
+  document.getElementById("fav-min").value = obj.favMin||"";
+  document.getElementById("fav-max").value = obj.favMax||"";
+}
+function currentPatternObj(){
+  const p={};
+  document.querySelectorAll(".leg").forEach(row=>{
+    const op1=parseOp(row.querySelector(".op1").value),v1=row.querySelector(".v1").value.trim();
+    const op2=parseOp(row.querySelector(".op2").value),v2=row.querySelector(".v2").value.trim();
+    if(op1===""&&op2==="")return;
+    p[row.dataset.cat]={op1,val1:v1,op2,val2:v2};
+  });
+  return {pattern:p,side:SIDE,avgOdd:document.getElementById("avg-odd").value,hcap:document.getElementById("hcap").value,
+    ghcap:document.getElementById("ghcap").value,
+    favMin:document.getElementById("fav-min").value,favMax:document.getElementById("fav-max").value};
+}
+
+/* ============================================================
+   DATA LOADING
+   ============================================================ */
+async function handleFiles(fileList){
+  const files=[...fileList];
+  for(const f of files){
+    const lower=f.name.toLowerCase();
+    if(lower.endsWith(".zip")){
+      try{
+        const zip=await JSZip.loadAsync(await f.arrayBuffer());
+        const matches=[]; const entries=Object.values(zip.files).filter(e=>!e.dir&&e.name.toLowerCase().endsWith(".xlsx")).sort((a,b)=>a.name.localeCompare(b.name));
+        for(const e of entries){ const buf=await e.async("arraybuffer"); matches.push(...parseSheet(buf,e.name)); }
+        addLeague(f.name.replace(/\.zip$/i,""),matches);
+      }catch(err){toast("Σφάλμα ZIP: "+f.name);}
+    }else if(lower.endsWith(".xlsx")){
+      try{ const m=parseSheet(await f.arrayBuffer(),f.name);
+        // group loose xlsx under inferred league name (folder or "Uploaded")
+        const lg = f.webkitRelativePath ? f.webkitRelativePath.split("/")[0] : "Uploaded";
+        mergeIntoLeague(lg,m);
+      }catch(err){toast("Σφάλμα xlsx: "+f.name);}
+    }
+  }
+  renderLeagues();
+}
+function addLeague(name,matches){
+  let ex=LEAGUES.find(l=>l.name===name);
+  if(ex) ex.matches=matches; else LEAGUES.push({name,matches});
+}
+function mergeIntoLeague(name,matches){
+  let ex=LEAGUES.find(l=>l.name===name);
+  if(ex) ex.matches.push(...matches); else LEAGUES.push({name,matches});
+}
+function renderLeagues(){
+  const host=document.getElementById("leagues"); host.innerHTML="";
+  LEAGUES.forEach((l,i)=>{
+    const r=document.createElement("div"); r.className="lg-row";
+    r.innerHTML=`<span class="nm" title="${l.name}">🏆 ${l.name}</span><span class="ct">${l.matches.length} ματς</span><span class="x" data-i="${i}">✕</span>`;
+    r.querySelector(".x").addEventListener("click",()=>{LEAGUES.splice(i,1);renderLeagues();});
+    host.appendChild(r);
+  });
+  const tot=LEAGUES.reduce((s,l)=>s+l.matches.length,0);
+  document.querySelector("#st-leagues b").textContent=LEAGUES.length;
+  document.querySelector("#st-matches b").textContent=tot;
+  document.getElementById("run").disabled=tot===0;
+}
+
+/* ============================================================
+   RENDER RESULTS
+   ============================================================ */
+function fmt(n,d=2){return (n>=0?"+":"")+n.toFixed(d);}
+function pct(n){return (n*100).toFixed(2)+"%";}
+function bucketLabel(b){return b.lo.toFixed(2).replace(".",",")+"–"+b.hi.toFixed(2).replace(".",",");}
+function breakdownTable(title,map,labelHead){
+  const entries=Object.entries(map||{});
+  if(!entries.length) return "";
+  entries.sort((a,b)=>b[1].pnl-a[1].pnl);
+  let h=`<div class="section-lbl">${title}</div><div class="tbl-wrap"><table class="res"><thead><tr><th>${labelHead}</th><th>Bets</th><th>Wins</th><th>Hit%</th><th>P&L</th><th>ROI</th></tr></thead><tbody>`;
+  for(const [k,v] of entries){
+    h+=`<tr><td class="team">${escapeHtml(k)}</td><td>${v.bets}</td><td style="color:var(--green)">${v.wins}</td><td>${(v.wins/v.bets*100).toFixed(2)}%</td><td style="color:${v.pnl>=0?'var(--green)':'var(--red)'}">${fmt(v.pnl,1)}</td><td>${fmt(v.pnl/v.bets*100,1)}%</td></tr>`;
+  }
+  return h+`</tbody></table></div>`;
+}
+function pivotTable(title,rows,keyFn,headLabel){
+  const groups={};
+  for(const r of rows){
+    if(r.favOdd===null) continue;
+    let bi=-1;
+    for(let i=0;i<RANGES.length;i++){ const[lo,hi]=RANGES[i]; if(r.favOdd>=lo-1e-9&&r.favOdd<=hi+1e-9){bi=i;break;} }
+    if(bi<0) continue; // χωρίς εύρος → δεν μετράει
+    const k=keyFn(r);
+    if(!groups[k]) groups[k]={b:RANGES.map(()=>({bets:0,wins:0,pnl:0})),t:{bets:0,wins:0,pnl:0}};
+    const g=groups[k];
+    g.b[bi].bets++; g.t.bets++;
+    if(r.won){g.b[bi].wins++; g.t.wins++;}
+    g.b[bi].pnl+=r.pnl; g.t.pnl+=r.pnl;
+  }
+  const entries=Object.entries(groups);
+  if(!entries.length) return "";
+  entries.sort((a,b)=>b[1].t.pnl-a[1].t.pnl);
+  const cell=(c,tot)=>{
+    if(c.bets===0) return `<td class="pv${tot?' tot':''} zero">–</td>`;
+    const col=c.pnl>=0?'var(--green)':'var(--red)';
+    return `<td class="pv${tot?' tot':''}"><b style="color:${col}">${fmt(c.pnl,1)}</b><span class="sub">${c.wins}/${c.bets} · ${fmt(c.pnl/c.bets*100,0)}%</span></td>`;
+  };
+  let h=`<div class="section-lbl">${title}</div><div class="tbl-wrap"><table class="res"><thead><tr><th>${headLabel}</th>`;
+  RANGES.forEach(([lo,hi])=>h+=`<th>${lo.toFixed(2).replace(".",",")}–${hi.toFixed(2).replace(".",",")}</th>`);
+  h+=`<th>TOTAL</th></tr></thead><tbody>`;
+  for(const [k,g] of entries){
+    h+=`<tr><td class="team">${escapeHtml(k)}</td>`;
+    g.b.forEach(c=>h+=cell(c,false));
+    h+=cell(g.t,true)+`</tr>`;
+  }
+  return h+`</tbody></table></div>`;
+}
+
+function render(res){
+  document.getElementById("empty").style.display="none";
+  const host=document.getElementById("results"); host.style.display="block";
+  const {wins,bets,losses,pnl,ao}=res;
+  const hit=bets?wins/bets:0, be=ao>0?1/ao:0, roi=bets?pnl/bets:0;
+  const profitable=pnl>0;
+  const profBuckets=res.buckets.filter(b=>b.pnl>0&&b.bets>0).map(b=>bucketLabel(b));
+
+  let verdictSub;
+  if(profBuckets.length) verdictSub=`Κερδοφόρο εύρος αποδόσεων φαβορί: <b>${profBuckets.join(" · ")}</b>`;
+  else verdictSub=`Κανένα εύρος αποδόσεων δεν είναι κερδοφόρο σε αυτά τα δεδομένα.`;
+
+  let filterTxt="";
+  if(res.favMin!=null||res.favMax!=null){
+    const lo=res.favMin!=null?res.favMin:"–", hi=res.favMax!=null?res.favMax:"–";
+    filterTxt=` · ΦΙΛΤΡΟ ΑΠΟΔΟΣΗΣ ΦΑΒΟΡΙ ${lo}–${hi}`;
+  }
+
+  let html=`
+  <div class="verdict ${profitable?'good':'bad'}">
+    <div class="tag">ΕΤΥΜΗΓΟΡΙΑ — ${bets} ΣΤΟΙΧΗΜΑΤΑ${filterTxt}</div>
+    <h1>${profitable?'✓ ΚΕΡΔΟΦΟΡΟ':'✕ ΜΗ ΚΕΡΔΟΦΟΡΟ'}  <span style="font-family:var(--mono);font-size:24px">${fmt(pnl,1)}u</span></h1>
+    <div class="sub">ROI <b>${fmt(roi*100,2)}%</b> · Hit rate <b>${pct(hit)}</b> vs breakeven <b>${pct(be)}</b> @ απόδοση ${ao} · ${hit>be?'<span style="color:var(--green)">edge θετικό</span>':'<span style="color:var(--red)">κάτω από το breakeven</span>'}</div>
+    <div class="sub">${verdictSub}</div>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="k">Στοιχήματα</div><div class="v">${bets}</div></div>
+    <div class="kpi"><div class="k">Wins</div><div class="v pos">${wins}</div></div>
+    <div class="kpi"><div class="k">Losses</div><div class="v neg">${losses}</div></div>
+    <div class="kpi"><div class="k">Hit rate</div><div class="v amb">${pct(hit)}</div></div>
+    <div class="kpi"><div class="k">P&amp;L (units)</div><div class="v ${pnl>=0?'pos':'neg'}">${fmt(pnl,1)}</div></div>
+    <div class="kpi"><div class="k">ROI</div><div class="v ${roi>=0?'pos':'neg'}">${fmt(roi*100,2)}%</div></div>
+    <div class="kpi"><div class="k">Breakeven hit</div><div class="v">${pct(be)}</div></div>
+    <div class="kpi"><div class="k">Μέση απόδοση</div><div class="v amb">${ao}</div></div>
+  </div>
+
+  <div class="section-lbl">Κατανομή ανά εύρος αποδόσεων φαβορί</div>
+  <div class="buckets">`;
+  const maxAbs=Math.max(1,...res.buckets.map(b=>Math.abs(b.pnl)));
+  res.buckets.forEach(b=>{
+    const cls=b.bets===0?"zero":(b.pnl>0?"pos":"neg");
+    const bhit=b.bets?b.wins/b.bets:0;
+    html+=`<div class="bk ${cls}">
+      <div class="rng">${bucketLabel(b)}</div>
+      <div class="pnl ${b.pnl>=0?'pos':'neg'}">${fmt(b.pnl,1)}u</div>
+      <div class="meta">bets <b>${b.bets}</b> · wins <b>${b.wins}</b><br>hit <b>${(bhit*100).toFixed(2)}%</b> · ROI <b>${b.bets?fmt(b.pnl/b.bets*100,1):'–'}%</b></div>
+      <div class="bar"><i style="width:${Math.abs(b.pnl)/maxAbs*100}%;background:${b.pnl>=0?'var(--green)':'var(--red)'}"></i></div>
+    </div>`;
+  });
+  html+=`</div>
+
+  <div class="section-lbl">Καμπύλη equity</div>
+  <div class="chart-card"><canvas id="eq" height="240"></canvas></div>`;
+
+  // breakdowns: country, season, league
+  html+=breakdownTable("Κατανομή ανά χώρα",res.byCountry,"Χώρα");
+  html+=breakdownTable("Κατανομή ανά σεζόν / έτος",res.bySeason,"Σεζόν");
+  if(Object.keys(res.byLeague).length>1)
+    html+=breakdownTable("Κατανομή ανά πρωτάθλημα",res.byLeague,"Πρωτάθλημα");
+  // cross matrices (columns = odds ranges)
+  html+=pivotTable("Ανά χώρα × εύρος απόδοσης (P&L · W/B · ROI)", res.rows, r=>r.country||"—", "Χώρα");
+  html+=pivotTable("Ανά χώρα × σεζόν × εύρος απόδοσης", res.rows, r=>`${r.country||"—"} · ${r.season||"—"}`, "Χώρα · Σεζόν");
+
+  // winners
+  const legKeys=res.legs.map(l=>shortCat(l.cat));
+  const winners=res.rows.filter(r=>r.won);
+  window._winners=winners; window._res=res;
+  html+=`<div class="section-lbl" style="margin-top:22px">Επιτυχημένα στοιχήματα (${winners.length})</div>`;
+  if(winners.length){
+    html+=`<div class="tbl-wrap tall"><table class="res"><thead><tr class="leg-vals"><th>R</th><th>Match</th><th>Σεζόν</th><th>Odds H/D/A</th><th>FAV</th>${legKeys.map(k=>`<th>${sideLabel(k,res.side)}</th>`).join("")}</tr></thead><tbody>`;
+    winners.forEach((r,i)=>{
+      const fav=r.favHome===null?"–":(r.favHome?"HOME":"AWAY");
+      const cells=res.legs.map(l=>{ const k=shortCat(l.cat); const sfx=firstEvtSuffix(r.raw,l.cat);
+        return `<td>${r.acts[k]??"–"}${sfx?`<span style="color:var(--muted);font-size:11px">${sfx}</span>`:""}</td>`; }).join("");
+      html+=`<tr class="wrow" data-widx="${i}" title="Διπλό κλικ για όλα τα δεδομένα του ματς"><td>${r.round??"–"}</td><td class="team">${r.teams}</td><td style="color:var(--muted);font-family:var(--mono);font-size:11px;white-space:nowrap">${leagueOf(r.file)}</td><td>${r.oh}/${r.od}/${r.oa}</td><td><span class="fav-tag">${fav}</span></td>${cells}</tr>`;
+    });
+    html+=`</tbody></table></div>`;
+    html+=`<div id="match-detail" class="md-wrap"><div class="md-hint">↑ Διπλό κλικ σε αγώνα για να ανοίξει εδώ με όλα τα δεδομένα του Excel (φωτισμένα όσα έχεις επιλέξει).</div></div>`;
+  }else{
+    html+=`<p style="color:var(--faint);font-size:13px">Κανένα ματς δεν ικανοποίησε το pattern.</p>`;
+  }
+
+  // ---- CLOSE MISSES (ήττες με ζωντανό περιθώριο) ----
+  const cm=computeCloseMisses(res);
+  window._cmA=cm.A; window._cmB=cm.B; window._cmRes=res;
+  const winLabel = cm.fhWindow ? "30′→45′ (1ο ημίχρονο)" : "75′→τέλος";
+  html+=`<div class="section-lbl" style="margin-top:26px">⚡ ΚΕΡΔΙΖΑΝ &amp; ΕΧΑΣΑΝ — ισχυρό (${cm.A.length})</div>`;
+  html+=`<div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin:-6px 0 10px">Ήττες που σε κάποια στιγμή στο παράθυρο <b style="color:var(--ink)">${winLabel}</b> ήταν <b style="color:var(--green)">πλήρως κερδισμένες</b> — υπήρχε περιθώριο αντίδρασης. (επί ${cm.losses} ηττών${cm.excluded?` · ${cm.excluded} χωρίς χρονολόγιο εξαιρέθηκαν`:""})</div>`;
+  html+=renderCMTable(cm.A,"A",res.legs);
+  html+=`<div class="section-lbl" style="margin-top:22px">≈ ΒΡΕΘΗΚΑΝ ΚΟΝΤΑ — υποδεέστερο (${cm.B.length})</div>`;
+  html+=`<div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin:-6px 0 10px">Ήττες που στο παράθυρο <b style="color:var(--ink)">${winLabel}</b> δεν κέρδισαν ποτέ, αλλά έφτασαν <b style="color:var(--amber)">οριακά</b> — έλειπε ακριβώς 1 (κόρνερ ή γκολ).</div>`;
+  html+=renderCMTable(cm.B,"B",res.legs);
+  html+=`<div id="cm-detail" class="md-wrap"><div class="md-hint">↑ Διπλό κλικ σε αγώνα close-miss για χρονολόγιο διακύμανσης + όλα τα δεδομένα του Excel.</div></div>`;
+
+  host.innerHTML=html;
+  drawEquity(res.rows);
+  host.querySelectorAll(".wrow").forEach(tr=>tr.addEventListener("dblclick",()=>{
+    if(tr.dataset.cm){
+      const list = tr.dataset.cm==="A"?window._cmA:window._cmB;
+      const cmrow=(list||[])[+tr.dataset.i]; if(!cmrow) return;
+      document.getElementById("cm-detail").innerHTML=renderCMDetail(cmrow,window._cmRes,tr.dataset.cm);
+      host.querySelectorAll(".wrow").forEach(x=>x.classList.remove("sel")); tr.classList.add("sel");
+      document.getElementById("cm-detail").scrollIntoView({behavior:"smooth",block:"nearest"});
+      return;
+    }
+    const r=(window._winners||[])[+tr.dataset.widx]; if(!r) return;
+    document.getElementById("match-detail").innerHTML=renderMatchDetail(r,window._res);
+    host.querySelectorAll(".wrow").forEach(x=>x.classList.remove("sel")); tr.classList.add("sel");
+    document.getElementById("match-detail").scrollIntoView({behavior:"smooth",block:"nearest"});
+  }));
+}
+
+function legHighlightCols(leg,swap){
+  if(leg.cornersH!==undefined) return ["R","S","T","U"];
+  if(leg.goalsH!==undefined) return ["L","M"];
+  const cn=normCat(leg.cat);
+  if(cn===normCat("SECOND HALF RESULT (1/2/0)")) return ["J","K"];
+  if(cn===normCat("SECOND HALF FAVOURITE GOALS")||cn===normCat("SECOND HALF UNDERDOG GOALS")) return ["J","K"];
+  if(cn===normCat("2ND HALF CORNER WINNER")) return ["T","U"];
+  if(cn===normCat("HOME CORNERS TOTAL")) return swap?["S","U"]:["R","T"];
+  if(cn===normCat("AWAY CORNERS TOTAL")) return swap?["R","T"]:["S","U"];
+  let col=MAP_N[cn]; if(!col) return [];
+  if(swap&&SWAP_MAP[col]) col=SWAP_MAP[col];
+  return [col];
+}
+function renderMatchDetail(r,res){
+  const swap=determineSwap(res.side,r.oh,r.oa);
+  const hl=new Set(); res.legs.forEach(l=>legHighlightCols(l,swap).forEach(c=>hl.add(c)));
+  const m=r.raw||{};
+  const ovr={C:"Γηπεδούχος",D:"Φιλοξενούμενος",E:"Απόδοση 1",F:"Απόδοση Χ",G:"Απόδοση 2"};
+  const lblOf=L=>ovr[L]||HEADERS[L]||("Στήλη "+L);
+  const letters=[];
+  for(let j=0;j<52;j++){ const L=colLetter(j); if((HEADERS[L]!=null)||(m[L]!=null)) letters.push(L); }
+  const folder=leagueOf(r.file);
+  const favTxt=r.favHome===null?"–":(r.favHome?"HOME":"AWAY");
+  let h=`<div class="md-head">
+    <div class="md-title">${escapeHtml(r.teams)}</div>
+    <div class="md-meta">📁 <b>${escapeHtml(folder)}</b> · ${escapeHtml(r.country||"—")} ${escapeHtml(r.season||"")} · R${r.round??"–"}</div>
+    <div class="md-meta md-file">${escapeHtml(r.file||"")}</div>
+    <div class="md-meta">FAV: <b>${favTxt}</b> · Odds ${r.oh}/${r.od}/${r.oa} · ${r.won?'<span style="color:var(--green)">WON</span>':'<span style="color:var(--red)">LOST</span>'} ${fmt(r.pnl,1)}u · φωτισμένα = επιλογές pattern</div>
+  </div><div class="md-grid">`;
+  letters.forEach(L=>{
+    const v=m[L]; const on=hl.has(L);
+    let extra="";
+    if(L==="Q"){ const e=firstEvt(m.AW); if(e) extra=` <span style="color:var(--muted)">@${effLabel(e.eff,e.period)}</span>`; }
+    if(L==="N"){ const e=firstEvt(m.AY); if(e) extra=` <span style="color:var(--muted)">@${effLabel(e.eff,e.period)}</span>`; }
+    h+=`<div class="md-cell${on?' on':''}"><span class="md-k">${escapeHtml(lblOf(L))}</span><span class="md-v">${v==null?"–":escapeHtml(String(v))}${extra}</span></div>`;
+  });
+  return h+`</div>`;
+}
+
+function cmFav(r){ return r.favHome===null?"–":(r.favHome?"HOME":"AWAY"); }
+function cmTeamsScore(snap){ return `${snap.fh}-${snap.fa}`; }
+function cmCorners(snap){ return `${snap.hc}-${snap.ac}`; }
+/* table for a close-miss section (kind 'A' won-then-lost, 'B' came close) */
+function renderCMTable(list,kind,legs){
+  if(!list.length) return `<p style="color:var(--faint);font-size:13px">Καμία περίπτωση σε αυτά τα δεδομένα.</p>`;
+  const head = kind==="A"
+    ? `<th>R</th><th>Match</th><th>Σεζόν</th><th>Odds H/D/A</th><th>FAV</th><th>Πράσινο</th><th>Σκορ→slip</th><th>Κόρνερ→slip</th>`
+    : `<th>R</th><th>Match</th><th>Σεζόν</th><th>Odds H/D/A</th><th>FAV</th><th>Κοντά @</th><th>Έλειπε</th><th>Σκορ</th><th>Κόρνερ</th>`;
+  let h=`<div class="tbl-wrap tall"><table class="res"><thead><tr class="leg-vals">${head}</tr></thead><tbody>`;
+  list.forEach((cm,i)=>{
+    const r=cm.r, a=cm.anchor;
+    const span=`${effLabel(cm.firstMin,cm.period)}→${effLabel(cm.lastMin,cm.period)}`;
+    const note=legs?firstEvtNote(r.raw,legs):"";
+    const teamCell=`<td class="team">${r.teams}${note?`<br><span style="color:var(--muted);font-size:11px;font-family:var(--mono)">${note}</span>`:""}</td><td style="color:var(--muted);font-family:var(--mono);font-size:11px;white-space:nowrap">${leagueOf(r.file)}</td>`;
+    if(kind==="A"){
+      h+=`<tr class="wrow" data-cm="A" data-i="${i}" title="Διπλό κλικ για χρονολόγιο + όλα τα δεδομένα">`
+        +`<td>${r.round??"–"}</td>${teamCell}<td>${r.oh}/${r.od}/${r.oa}</td>`
+        +`<td><span class="fav-tag">${cmFav(r)}</span></td>`
+        +`<td style="color:var(--green)">${span}</td><td>${cmTeamsScore(a)}</td><td>${cmCorners(a)}</td></tr>`;
+    }else{
+      h+=`<tr class="wrow" data-cm="B" data-i="${i}" title="Διπλό κλικ για χρονολόγιο + όλα τα δεδομένα">`
+        +`<td>${r.round??"–"}</td>${teamCell}<td>${r.oh}/${r.od}/${r.oa}</td>`
+        +`<td><span class="fav-tag">${cmFav(r)}</span></td>`
+        +`<td style="color:var(--amber)">${effLabel(a.min,cm.period)}</td><td style="color:var(--amber)">${a.miss||"–"}</td>`
+        +`<td>${cmTeamsScore(a)}</td><td>${cmCorners(a)}</td></tr>`;
+    }
+  });
+  return h+`</tbody></table></div>`;
+}
+/* detail: post-anchor fluctuation timeline + full match grid */
+function renderCMDetail(cm,res,kind){
+  const r=cm.r;
+  const greenSet=new Set(cm.snaps.map(s=>s.min));
+  const verb = kind==="A" ? "ΗΤΑΝ ΠΡΑΣΙΝΟ" : "ΗΤΑΝ ΚΟΝΤΑ (έλειπε 1)";
+  const col  = kind==="A" ? "var(--green)" : "var(--amber)";
+  const span=`${effLabel(cm.firstMin,cm.period)} → ${effLabel(cm.lastMin,cm.period)}`;
+  const pts=cm.snaps.map(s=>effLabel(s.min,cm.period)).join(", ");
+  const ptsLbl = kind==="A" ? "πράσινα λεπτά" : "λεπτά close";
+  const note = res&&res.legs?firstEvtNote(r.raw,res.legs):"";
+  let h=`<div class="md-head" style="border-color:${col}">
+    <div class="md-title">${escapeHtml(r.teams)}</div>
+    <div class="md-meta"><span style="color:${col}">${verb}</span> · παράθυρο ${cm.period==="1ST"?"30′→45′":"75′→τέλος"} · στιγμές: <b>${span}</b></div>
+    <div class="md-meta">${ptsLbl} (ελέγχθηκε όλο το παράθυρο): <b style="color:${col}">${pts}</b></div>${note?`
+    <div class="md-meta">${note}</div>`:""}
+    <div class="md-meta">Headline @ <b>${effLabel(cm.anchor.min,cm.period)}</b> — σκορ <b>${cm.anchor.fh}-${cm.anchor.fa}</b> · κόρνερ <b>${cm.anchor.hc}-${cm.anchor.ac}</b>${cm.anchor.miss?` · έλειπε <b>${cm.anchor.miss}</b>`:""}</div>
+  </div>`;
+  h+=`<div style="background:var(--panel);border:1px solid var(--line);border-top:none;padding:12px 14px">
+    <div style="font-family:var(--mono);font-size:10px;letter-spacing:1.5px;color:var(--faint);text-transform:uppercase;margin-bottom:8px">Διακύμανση από ${effLabel(cm.firstMin,cm.period)} έως το τέλος (κόρνερ &amp; γκολ)</div>`;
+  if(!cm.tl.length){
+    h+=`<div style="color:var(--faint);font-size:12px">Καμία μεταβολή κόρνερ/γκολ μετά το ${effLabel(cm.firstMin,cm.period)} — το στιγμιότυπο έμεινε ως έχει μέχρι το τέλος.</div>`;
+  }else{
+    h+=`<div style="display:flex;flex-direction:column;gap:3px">`;
+    cm.tl.forEach(e=>{
+      const mk = greenSet.has(e.eff) ? `<span style="color:${col}">●</span>` : `<span style="color:var(--faint)">·</span>`;
+      const ic = e.kind==="G"?"⚽":"🚩";
+      const who= e.side==="H"?"Γηπεδ.":"Φιλοξ.";
+      h+=`<div style="font-family:var(--mono);font-size:11.5px;display:flex;gap:8px;align-items:baseline">
+        <span style="width:14px">${mk}</span>
+        <b style="color:var(--ink);min-width:48px">${effLabel(e.eff,cm.period)}</b>
+        <span style="min-width:84px">${ic} ${who}</span>
+        <span style="color:var(--muted)">σκορ <b style="color:var(--ink)">${e.fh}-${e.fa}</b> · κόρνερ <b style="color:var(--ink)">${e.hc}-${e.ac}</b></span>
+      </div>`;
+    });
+    h+=`</div>`;
+  }
+  h+=`<div style="font-size:10.5px;color:var(--faint);margin-top:8px">● = λεπτό όπου το στοίχημα ${kind==="A"?"ήταν πλήρως κερδισμένο":"ήταν κοντά (έλειπε 1)"}. Κρίνε μόνος σου το περιθώριο αντίδρασης.</div></div>`;
+  h+=renderMatchDetail(r,res);
+  return h;
+}
+function drawEquity(rows){
+  const cv=document.getElementById("eq"); if(!cv) return;
+  const dpr=window.devicePixelRatio||1;
+  const W=cv.clientWidth, H=240; cv.width=W*dpr; cv.height=H*dpr;
+  const ctx=cv.getContext("2d"); ctx.scale(dpr,dpr);
+  ctx.clearRect(0,0,W,H);
+  const pad={l:54,r:14,t:14,b:24};
+  const xs=W-pad.l-pad.r, ys=H-pad.t-pad.b;
+  const eq=rows.map(r=>r.equity); const n=eq.length;
+  if(!n) return;
+  let mn=Math.min(0,...eq), mx=Math.max(0,...eq); if(mn===mx){mn-=1;mx+=1;}
+  const X=i=>pad.l + (n<=1?0:i/(n-1)*xs);
+  const Y=v=>pad.t + (1-(v-mn)/(mx-mn))*ys;
+  // grid
+  ctx.strokeStyle="#26262c"; ctx.fillStyle="#5a5a63"; ctx.font="10px 'JetBrains Mono'"; ctx.lineWidth=1;
+  for(let g=0;g<=4;g++){ const v=mn+(mx-mn)*g/4, y=Y(v);
+    ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(W-pad.r,y);ctx.stroke();
+    ctx.fillText(v.toFixed(0),6,y+3); }
+  // zero line
+  const yz=Y(0); ctx.strokeStyle="#4a4a52"; ctx.setLineDash([4,4]);
+  ctx.beginPath();ctx.moveTo(pad.l,yz);ctx.lineTo(W-pad.r,yz);ctx.stroke();ctx.setLineDash([]);
+  // area + line
+  const last=eq[n-1];
+  const col=last>=0?"#3ddc97":"#ff5c6c";
+  const grad=ctx.createLinearGradient(0,pad.t,0,H-pad.b);
+  grad.addColorStop(0,(last>=0?"rgba(61,220,151,.22)":"rgba(255,92,108,.22)"));
+  grad.addColorStop(1,"rgba(0,0,0,0)");
+  ctx.beginPath(); ctx.moveTo(X(0),Y(eq[0]));
+  for(let i=1;i<n;i++) ctx.lineTo(X(i),Y(eq[i]));
+  ctx.lineTo(X(n-1),yz); ctx.lineTo(X(0),yz); ctx.closePath(); ctx.fillStyle=grad; ctx.fill();
+  ctx.beginPath(); ctx.moveTo(X(0),Y(eq[0]));
+  for(let i=1;i<n;i++) ctx.lineTo(X(i),Y(eq[i]));
+  ctx.strokeStyle=col; ctx.lineWidth=2; ctx.stroke();
+  ctx.fillStyle="#5a5a63"; ctx.fillText("bet #1",pad.l,H-8); ctx.fillText("#"+n,W-pad.r-22,H-8);
+}
+
+/* ============================================================
+   EVENTS
+   ============================================================ */
+const drop=document.getElementById("drop");
+["dragenter","dragover"].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.add("over");}));
+["dragleave","drop"].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.remove("over");}));
+drop.addEventListener("drop",ev=>{ if(ev.dataTransfer.files.length) handleFiles(ev.dataTransfer.files); });
+drop.addEventListener("click",e=>{ if(e.target.id!=="pick-dir") document.getElementById("file-in").click(); });
+document.getElementById("pick-files").addEventListener("click",e=>{e.stopPropagation();document.getElementById("file-in").click();});
+document.getElementById("pick-dir").addEventListener("click",e=>{e.stopPropagation();document.getElementById("dir-in").click();});
+document.getElementById("file-in").addEventListener("change",e=>handleFiles(e.target.files));
+document.getElementById("dir-in").addEventListener("change",e=>handleFiles(e.target.files));
+
+document.querySelectorAll("#seg-side button").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll("#seg-side button").forEach(x=>x.classList.remove("on"));
+  b.classList.add("on"); SIDE=b.dataset.v; relabelLegs();
+}));
+
+function refreshHcap(){
+  const v=document.getElementById("hcap").value, el=document.getElementById("hcap-expl");
+  const sel=document.getElementById("hcap"); sel.classList.toggle("set",v!=="");
+  if(!v){ el.textContent=""; return; }
+  const side=v[0], h=v.slice(1);
+  if(side==="F") el.innerHTML=`Κερδίζει αν: <b>κόρνερ φαβορί −${h} &gt; κόρνερ αουτσάιντερ</b>.`;
+  else el.innerHTML=`Κερδίζει αν: <b>κόρνερ αουτσάιντερ +${h} &gt; κόρνερ φαβορί</b>.`;
+}
+document.getElementById("hcap").addEventListener("change",refreshHcap);
+function refreshGhcap(){
+  const v=document.getElementById("ghcap").value, el=document.getElementById("ghcap-expl");
+  const sel=document.getElementById("ghcap"); sel.classList.toggle("set",v!=="");
+  if(!v){ el.textContent=""; return; }
+  const side=v[0], h=v.slice(1);
+  if(side==="F") el.innerHTML=`Κερδίζει αν: <b>γκολ φαβορί −${h} &gt; γκολ αουτσάιντερ</b>.`;
+  else el.innerHTML=`Κερδίζει αν: <b>γκολ αουτσάιντερ +${h} &gt; γκολ φαβορί</b>.`;
+}
+document.getElementById("ghcap").addEventListener("change",refreshGhcap);
+
+document.getElementById("run").addEventListener("click",()=>{
+  const legs=readPattern();
+  const hsel=document.getElementById("hcap").value;
+  if(hsel) legs.push({cat:"CORNERS HANDICAP",cornersH:{side:hsel[0],h:parseFloat(hsel.slice(1))}});
+  const gsel=document.getElementById("ghcap").value;
+  if(gsel) legs.push({cat:"GOALS HANDICAP",goalsH:{side:gsel[0],h:parseFloat(gsel.slice(1))}});
+  if(!legs.length){toast("Όρισε τουλάχιστον ένα leg ή handicap.");return;}
+  const all=[]; LEAGUES.forEach(l=>all.push(...l.matches));
+  if(!all.length){toast("Φόρτωσε δεδομένα πρώτα.");return;}
+  const avg=document.getElementById("avg-odd").value;
+  if(normFloat(avg)===null||normFloat(avg)<=0){toast("Όρισε μέση απόδοση (π.χ. 151).");return;}
+  const favMin=normFloat(document.getElementById("fav-min").value);
+  const favMax=normFloat(document.getElementById("fav-max").value);
+  if(favMin!=null&&favMax!=null&&favMin>favMax){toast("Το «από» πρέπει να είναι μικρότερο από το «έως».");return;}
+  const btn=document.getElementById("run"); btn.innerHTML='<span class="spin"></span>ΥΠΟΛΟΓΙΣΜΟΣ…'; btn.disabled=true;
+  setTimeout(()=>{
+    const res=analyze(all,legs,SIDE,avg,favMin,favMax);
+    if(!res.bets){ toast("Κανένα ματς στο επιλεγμένο εύρος απόδοσης."); btn.innerHTML='▶ ΑΝΑΛΥΣΗ'; btn.disabled=false; return; }
+    const w=document.getElementById("warn");
+    if(res.unsupported.length){ w.style.display="block"; w.innerHTML="⚠ Κατηγορίες χωρίς δεδομένα στα φορτωμένα αρχεία (δεν χτυπάνε ποτέ): <b>"+res.unsupported.map(shortCat).join(", ")+"</b>"; }
+    else w.style.display="none";
+    render(res);
+    btn.innerHTML='▶ ΑΝΑΛΥΣΗ'; btn.disabled=false;
+  },30);
+});
+
+/* ---------- Pattern Library ---------- */
+const LIB_KEY="betbuilder_lab_library_v1";
+let LIBRARY=[];
+function loadLibrary(){ try{ const s=localStorage.getItem(LIB_KEY); LIBRARY=s?JSON.parse(s):[]; }catch(e){ LIBRARY=LIBRARY||[]; } }
+function persistLibrary(){ try{ localStorage.setItem(LIB_KEY,JSON.stringify(LIBRARY)); }catch(e){} }
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function opSym(op){ return op==="!="?"≠":op; }
+function describeLegs(obj){
+  const lines=[];
+  CATS.forEach(([grp,items])=>items.forEach(([cat])=>{
+    const d=obj.pattern&&obj.pattern[cat]; if(!d) return;
+    const parts=[];
+    if(d.op1) parts.push(`${opSym(d.op1)} ${d.val1||""}`.trim());
+    if(d.op2) parts.push(`${opSym(d.op2)} ${d.val2||""}`.trim());
+    if(parts.length) lines.push(`${sideLabel(shortCat(cat),obj.side)}  ${parts.join("  &  ")}`);
+  }));
+  if(obj.hcap){ let v=obj.hcap; if(!/^[FU]/.test(v)) v="U"+v; const s=v[0],hh=v.slice(1); lines.push(`CORNERS HANDICAP  ${s==="F"?"φαβορί −":"αουτσάιντερ +"}${hh}`); }
+  if(obj.ghcap){ const s=obj.ghcap[0], hh=obj.ghcap.slice(1); lines.push(`GOALS HANDICAP  ${s==="F"?"φαβορί −":"αουτσάιντερ +"}${hh}`); }
+  if(obj.favMin||obj.favMax) lines.push(`ΦΙΛΤΡΟ απόδοσης φαβορί  ${obj.favMin||"–"}–${obj.favMax||"–"}`);
+  return lines;
+}
+function descHtml(obj){
+  const lines=describeLegs(obj);
+  const sideTxt=obj.side==="OFF"?"—":obj.side;
+  let h=lines.length?lines.map(l=>"• "+escapeHtml(l)).join("<br>"):"<i>καμία επιλογή</i>";
+  h+=`<br><br>Πλευρά: <b>${sideTxt}</b> &nbsp;·&nbsp; Μέση απόδοση: <b>${escapeHtml(obj.avgOdd||"—")}</b>`;
+  return h;
+}
+const saveModal=document.getElementById("save-modal"), libModal=document.getElementById("lib-modal");
+
+document.getElementById("save").addEventListener("click",()=>{
+  const obj=currentPatternObj();
+  if(!Object.keys(obj.pattern).length && !obj.hcap){toast("Δεν υπάρχει pattern για αποθήκευση.");return;}
+  document.getElementById("save-name").value="";
+  document.getElementById("save-note").value="";
+  document.getElementById("save-desc").innerHTML=descHtml(obj);
+  saveModal.classList.add("open");
+  setTimeout(()=>document.getElementById("save-name").focus(),50);
+});
+document.getElementById("save-confirm").addEventListener("click",()=>{
+  const name=document.getElementById("save-name").value.trim();
+  if(!name){toast("Δώσε όνομα στο pattern.");return;}
+  const obj=currentPatternObj();
+  const entry={id:Date.now()+"-"+Math.random().toString(36).slice(2,7),
+    name, note:document.getElementById("save-note").value.trim(),
+    createdAt:new Date().toISOString(), ...obj};
+  LIBRARY.unshift(entry); persistLibrary();
+  saveModal.classList.remove("open");
+  toast("Αποθηκεύτηκε στη βιβλιοθήκη ✓");
+});
+
+function renderLibrary(){
+  const host=document.getElementById("lib-list");
+  if(!LIBRARY.length){ host.innerHTML='<div class="lib-empty">Η βιβλιοθήκη είναι άδεια. Φτιάξε ένα pattern και πάτα SAVE.</div>'; return; }
+  host.innerHTML=LIBRARY.map(e=>{
+    const dt=new Date(e.createdAt); const ds=isNaN(dt.getTime())?"":dt.toLocaleString("el-GR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
+    const lines=describeLegs(e);
+    return `<div class="lib-card">
+      <div class="top"><span class="nm">${escapeHtml(e.name)}</span><span class="dt">${ds}</span></div>
+      <div class="meta">Πλευρά: ${e.side==="OFF"?"—":e.side} &nbsp;·&nbsp; Μέση απόδοση: ${escapeHtml(e.avgOdd||"—")}${e.hcap?` &nbsp;·&nbsp; Handicap +${escapeHtml(e.hcap)}`:""}</div>
+      ${e.note?`<div class="note">“${escapeHtml(e.note)}”</div>`:""}
+      <div class="legs">${lines.length?lines.map(l=>"• "+escapeHtml(l)).join("<br>"):"<i>καμία επιλογή</i>"}</div>
+      <div class="acts2"><button class="btn run" data-load="${e.id}">▶ LOAD</button><button class="btn ghost" data-del="${e.id}">DELETE</button></div>
+    </div>`;
+  }).join("");
+  host.querySelectorAll("[data-load]").forEach(b=>b.addEventListener("click",()=>{
+    const e=LIBRARY.find(x=>x.id===b.dataset.load); if(!e)return;
+    loadPatternObj(e); libModal.classList.remove("open"); toast("Φορτώθηκε: "+e.name+" ✓");
+  }));
+  host.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",()=>{
+    LIBRARY=LIBRARY.filter(x=>x.id!==b.dataset.del); persistLibrary(); renderLibrary();
+  }));
+}
+document.getElementById("load").addEventListener("click",()=>{ renderLibrary(); libModal.classList.add("open"); });
+
+document.querySelectorAll(".modal").forEach(m=>m.addEventListener("click",ev=>{
+  if(ev.target===m || (ev.target.hasAttribute&&ev.target.hasAttribute("data-close"))) m.classList.remove("open");
+}));
+document.getElementById("reset").addEventListener("click",()=>{
+  loadPatternObj({pattern:{},side:"FAVORITE",avgOdd:"",hcap:""}); toast("Reset — όλα μηδέν ✓");
+});
+
+let toastT;
+function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show");
+  clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),2200); }
+
+window.addEventListener("resize",()=>{ const cv=document.getElementById("eq"); if(cv&&window._lastRows) drawEquity(window._lastRows); });
+const _origRender=render;
+render=function(res){ window._lastRows=res.rows; _origRender(res); };
+
+/* init */
+buildLegs();
+refreshHcap();
+refreshGhcap();
+loadLibrary();
+</script>
+</body>
+</html>
