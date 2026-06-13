@@ -1408,6 +1408,26 @@ document.getElementById("pick-dir").addEventListener("click",e=>{e.stopPropagati
 document.getElementById("file-in").addEventListener("change",e=>handleFiles(e.target.files));
 document.getElementById("dir-in").addEventListener("change",e=>handleFiles(e.target.files));
 
+// ---- AUTO-LOAD (GitHub Pages): διαβαζει data/manifest.json -> ["αρχειο1.zip", ...]
+// και φορτωνει τα zip αυτοματα στο ανοιγμα. Τοπικα (file://) δεν τρεχει — μενει το drag&drop.
+(async function autoLoadRepoData(){
+  if(location.protocol==="file:") return;
+  try{
+    const r=await fetch("data/manifest.json",{cache:"no-store"});
+    if(!r.ok) return;
+    const list=await r.json();
+    if(!Array.isArray(list)||!list.length) return;
+    const files=[];
+    for(const name of list){
+      try{
+        const fr=await fetch("data/"+encodeURIComponent(name),{cache:"no-store"});
+        if(fr.ok) files.push(new File([await fr.blob()], name));
+      }catch(e){}
+    }
+    if(files.length) handleFiles(files);
+  }catch(e){}
+})();
+
 document.querySelectorAll("#seg-side button").forEach(b=>b.addEventListener("click",()=>{
   document.querySelectorAll("#seg-side button").forEach(x=>x.classList.remove("on"));
   b.classList.add("on"); SIDE=b.dataset.v; relabelLegs();
