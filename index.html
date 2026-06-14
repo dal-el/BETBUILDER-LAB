@@ -402,10 +402,24 @@ table.res th:first-child,table.res td:first-child,table.res td.team{text-align:l
 .histbtn:hover:not(:disabled){border-color:var(--amber);background:rgba(255,210,74,.12);color:var(--amber)}
 .histbtn:disabled{opacity:.32;cursor:not-allowed}
 
-@media(max-width:680px){
-  .leg{grid-template-columns:26px 1fr 48px 84px 48px 84px;gap:5px}
-  .stp button{width:28px;height:44px}
-  .status,.stp input,.leg select{height:44px}
+@media(max-width:600px){
+  .leg{
+    grid-template-columns:32px 1fr 1fr;
+    grid-template-areas:"st lbl lbl" "st o1 s1" "st o2 s2";
+    gap:6px; align-items:center;
+    padding-bottom:9px; margin-bottom:9px; border-bottom:1px solid rgba(255,255,255,.06);
+  }
+  .leg .status{grid-area:st; align-self:stretch; height:auto; width:32px}
+  .leg .lbl{grid-area:lbl; font-size:12.5px; line-height:1.25; padding:2px 0; white-space:normal}
+  .leg .op1{grid-area:o1}
+  .leg .op2{grid-area:o2}
+  .leg .stp:nth-of-type(2){grid-area:s1}
+  .leg .stp:nth-of-type(3){grid-area:s2}
+  .leg select{height:42px; font-size:14px; width:100%}
+  .stp{width:100%}
+  .stp button{flex:0 0 auto; width:44px; height:42px; font-size:20px}
+  .stp input{height:42px; font-size:16px}
+  .grp-title{font-size:12px}
 }
 /* ==================== /STADIUM / PITCH SKIN ==================== */
 </style>
