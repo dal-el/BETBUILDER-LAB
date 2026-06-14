@@ -402,24 +402,25 @@ table.res th:first-child,table.res td:first-child,table.res td.team{text-align:l
 .histbtn:hover:not(:disabled){border-color:var(--amber);background:rgba(255,210,74,.12);color:var(--amber)}
 .histbtn:disabled{opacity:.32;cursor:not-allowed}
 
+/* league brief (wins + units) */
+.lg-brief{font-family:var(--mono);font-size:11px;display:inline-flex;gap:8px;align-items:center;white-space:nowrap;flex:none}
+.lg-brief:empty{display:none}
+.lg-brief .bw{color:var(--ink)}
+.lg-brief .bu.pos{color:var(--green)}
+.lg-brief .bu.neg{color:var(--red)}
+.lg-sub .lg-brief{font-size:10.5px}
+
 @media(max-width:600px){
-  .leg{
-    grid-template-columns:32px 1fr 1fr;
-    grid-template-areas:"st lbl lbl" "st o1 s1" "st o2 s2";
-    gap:6px; align-items:center;
-    padding-bottom:9px; margin-bottom:9px; border-bottom:1px solid rgba(255,255,255,.06);
-  }
-  .leg .status{grid-area:st; align-self:stretch; height:auto; width:32px}
-  .leg .lbl{grid-area:lbl; font-size:12.5px; line-height:1.25; padding:2px 0; white-space:normal}
-  .leg .op1{grid-area:o1}
-  .leg .op2{grid-area:o2}
-  .leg .stp:nth-of-type(2){grid-area:s1}
-  .leg .stp:nth-of-type(3){grid-area:s2}
-  .leg select{height:42px; font-size:14px; width:100%}
-  .stp{width:100%}
-  .stp button{flex:0 0 auto; width:44px; height:42px; font-size:20px}
-  .stp input{height:42px; font-size:16px}
-  .grp-title{font-size:12px}
+  /* Pattern Builder: ίδια οριζόντια μορφή όπως πριν· κρύβουμε τη 2η (προαιρετική) συνθήκη για να χωρούν οι λέξεις */
+  .leg{grid-template-columns:26px 1fr 70px 104px;gap:6px}
+  .leg .op2,.leg .stp:nth-of-type(3){display:none}
+  .leg .lbl{font-size:12.5px;line-height:1.25;white-space:normal}
+  .leg select{height:44px;font-size:14px}
+  .stp button{width:30px;height:44px;font-size:20px}
+  .stp input{height:44px;font-size:16px}
+  /* το brief πάει σε δική του 2η σειρά στο κινητό */
+  .lg-ghead,.lg-sub{flex-wrap:wrap}
+  .lg-brief{order:9;flex-basis:100%;margin-top:4px;padding-top:5px;border-top:1px dashed var(--line2)}
 }
 /* ==================== /STADIUM / PITCH SKIN ==================== */
 </style>
@@ -1336,10 +1337,11 @@ function renderLeagues(){
     const collapsed=!!LG_COLLAPSED[g];
     const grp=document.createElement("div"); grp.className="lg-group"+(collapsed?" collapsed":"")+(grpOn?"":" off");
 
-    const head=document.createElement("div"); head.className="lg-ghead";
+    const head=document.createElement("div"); head.className="lg-ghead"; head.dataset.grp=g;
     head.innerHTML=`<span class="arw">▾</span>`+
       `<input type="checkbox" class="lg-ck gck" title="Ενεργό/Εξαίρεση πρωταθλήματος">`+
       `<span class="gnm" title="${g}">🏆 ${g}</span>`+
+      `<span class="lg-brief"></span>`+
       `<span class="gct">${enabledCount}/${items.length} σεζόν · ${total} ματς</span><span class="gx" title="Αφαίρεση όλων">✕</span>`;
     const gck=head.querySelector(".gck");
     gck.checked=grpOn;
@@ -1367,9 +1369,11 @@ function renderLeagues(){
     const body=document.createElement("div"); body.className="lg-gbody";
     items.forEach(({l})=>{
       const subOn=l.enabled!==false;
-      const sub=document.createElement("div"); sub.className="lg-sub"+(subOn?"":" off");
+      const sub=document.createElement("div"); sub.className="lg-sub"+(subOn?"":" off"); sub.dataset.lname=l.name;
       sub.innerHTML=`<input type="checkbox" class="lg-ck sck" title="Ενεργή/Εξαίρεση σεζόν">`+
-        `<span class="nm" title="${l.name}">${l.name}</span><span class="ct">${l.matches.length} ματς</span><span class="x">✕</span>`;
+        `<span class="nm" title="${l.name}">${l.name}</span>`+
+        `<span class="lg-brief"></span>`+
+        `<span class="ct">${l.matches.length} ματς</span><span class="x">✕</span>`;
       const sck=sub.querySelector(".sck"); sck.checked=subOn;
       sck.addEventListener("change",()=>{ l.enabled=sck.checked; renderLeagues(); });
       sub.querySelector(".x").addEventListener("click",()=>{
@@ -1389,6 +1393,7 @@ function renderLeagues(){
   document.querySelector("#st-leagues b").textContent=enabledLeagues.length;
   document.querySelector("#st-matches b").textContent=tot;
   document.getElementById("run").disabled=tot===0;
+  try{annotateLeagues();}catch(e){}
 }
 function groupNames(){
   const seen={}; const out=[];
@@ -1873,8 +1878,29 @@ function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg
   clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),2200); }
 
 window.addEventListener("resize",()=>{ const cv=document.getElementById("eq"); if(cv&&window._lastRows) drawEquity(window._lastRows); });
+function _briefAgg(){
+  const res=window._res; if(!res||!res.byLeague) return null;
+  const perSeason=res.byLeague, perGroup={};
+  Object.keys(perSeason).forEach(n=>{ const g=groupKeyOf(n),a=perSeason[n];
+    const t=perGroup[g]||(perGroup[g]={bets:0,wins:0,pnl:0});
+    t.bets+=a.bets; t.wins+=a.wins; t.pnl+=a.pnl; });
+  return {perSeason,perGroup};
+}
+function _briefHTML(a){
+  if(!a||!a.bets) return "";
+  const cls=a.pnl>=0?"pos":"neg";
+  return `<span class="bw" title="Wins / σύνολο">✓ ${a.wins}/${a.bets}</span>`+
+         `<span class="bu ${cls}" title="Καθαρές μονάδες (units)">${fmt(a.pnl,1)}u</span>`;
+}
+function annotateLeagues(){
+  const m=_briefAgg(); if(!m) return;
+  document.querySelectorAll("#leagues .lg-ghead").forEach(h=>{ const b=h.querySelector(".lg-brief");
+    if(b) b.innerHTML=_briefHTML(m.perGroup[h.dataset.grp]); });
+  document.querySelectorAll("#leagues .lg-sub").forEach(s=>{ const b=s.querySelector(".lg-brief");
+    if(b) b.innerHTML=_briefHTML(m.perSeason[s.dataset.lname]); });
+}
 const _origRender=render;
-render=function(res){ window._lastRows=res.rows; _origRender(res); };
+render=function(res){ window._lastRows=res.rows; window._res=res; _origRender(res); try{annotateLeagues();}catch(e){} };
 
 /* ---- undo / redo (ιστορικό επιλογών) ---- */
 let HIST=[],HI=-1,HLOCK=false,HTIMER=null;
