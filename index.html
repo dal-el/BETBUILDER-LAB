@@ -336,6 +336,20 @@ header::after{content:"";position:absolute;left:24px;right:24px;bottom:9px;heigh
 .seg button.on{background:var(--amber);color:#06140d}
 .odd-in{background:rgba(0,0,0,.32);border:1px solid var(--line2);border-radius:9px;color:var(--amber);font-weight:600}
 .odd-in:focus{border-color:var(--amber);box-shadow:0 0 0 3px rgba(255,210,74,.18)}
+/* Dropdowns: σκουρα, ταιριαστα με το interface, custom βελακι */
+select.odd-in,.leg select{
+  -webkit-appearance:none;-moz-appearance:none;appearance:none;
+  background-color:var(--panel2);
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path d='M2 4l4 4 4-4' fill='none' stroke='%23ffd24a' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat:no-repeat;background-position:right 9px center;padding-right:28px;cursor:pointer}
+select.odd-in:hover,.leg select:hover{border-color:var(--amber-dim)}
+select.odd-in option,.leg select option{
+  background:var(--panel);color:var(--ink);font-weight:500}
+select.odd-in optgroup,.leg select optgroup{
+  background:var(--bg2);color:var(--amber);font-style:normal;font-weight:700;
+  font-family:var(--mono);font-size:11px}
+select.odd-in option:checked,.leg select option:checked{
+  background:var(--amber-dim);color:var(--amber)}
 .btn:focus-visible,.seg button:focus-visible,.mini-btn:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 
 /* --- section labels (chalk) --- */
@@ -395,12 +409,17 @@ table.res th:first-child,table.res td:first-child,table.res td.team{text-align:l
   -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
   touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 
+/* --- undo / redo flash highlight --- */
+@keyframes flashHl{0%{box-shadow:0 0 0 0 rgba(255,210,74,0)}18%{box-shadow:0 0 0 3px rgba(255,210,74,.85)}100%{box-shadow:0 0 0 0 rgba(255,210,74,0)}}
+.flash-hl{border-radius:10px;animation:flashHl 1.1s ease}
 /* --- undo / redo --- */
 .histbtn{width:42px;height:42px;flex:none;display:grid;place-items:center;padding:0;
   font-size:19px;border-radius:10px;background:var(--panel2);color:var(--ink);
   border:1px solid var(--line2);cursor:pointer;font-family:var(--sans)}
 .histbtn:hover:not(:disabled){border-color:var(--amber);background:rgba(255,210,74,.12);color:var(--amber)}
 .histbtn:disabled{opacity:.32;cursor:not-allowed}
+.hist-head{display:inline-flex;gap:6px;margin-left:14px;align-self:center}
+.hist-head .histbtn{width:34px;height:34px;font-size:16px;border-radius:9px}
 
 /* league brief (wins + units) */
 .lg-brief{font-family:var(--mono);font-size:11px;display:inline-flex;gap:8px;align-items:center;white-space:nowrap;flex:none}
@@ -422,6 +441,19 @@ table.res th:first-child,table.res td:first-child,table.res td.team{text-align:l
   .lg-ghead,.lg-sub{flex-wrap:wrap}
   .lg-brief{order:9;flex-basis:100%;margin-top:4px;padding-top:5px;border-top:1px dashed var(--line2)}
 }
+/* dropdown βελάκια: λευκά by default, κίτρινα μόνο όταν χρησιμοποιούνται */
+select.odd-in, .leg select{
+  color:var(--ink);
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path d='M2 4l4 4 4-4' fill='none' stroke='%23e9f2ef' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+}
+select.odd-in.set, .leg select.set, select.odd-in:focus, .leg select:focus{
+  color:var(--amber);
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path d='M2 4l4 4 4-4' fill='none' stroke='%23ffd24a' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+}
+/* +/- του builder: λευκά by default, κίτρινα μόνο σε χρήση (hover/ενεργό) */
+.stp button{color:var(--ink)}
+.stp button:hover{background:var(--amber-dim);color:var(--amber)}
+.leg.active .stp button{color:var(--amber)}
 /* ==================== /STADIUM / PITCH SKIN ==================== */
 </style>
 </head>
@@ -456,6 +488,10 @@ table.res th:first-child,table.res td:first-child,table.res td.team{text-align:l
       <span class="ball" aria-hidden="true">⚽</span>
       <b>BETBUILDER<span>·</span>LAB</b>
       <small>pattern backtester</small>
+      <span class="hist-head">
+        <button class="histbtn" id="undo" title="Αναίρεση επιλογής" aria-label="Undo" disabled>↶</button>
+        <button class="histbtn" id="redo" title="Επαναφορά επιλογής" aria-label="Redo" disabled>↷</button>
+      </span>
     </div>
     <div class="statusbar">
       <div class="pill" id="st-leagues">LEAGUES <b>0</b></div>
@@ -490,25 +526,73 @@ table.res th:first-child,table.res td:first-child,table.res td.team{text-align:l
           <div id="legs"></div>
 
           <div class="ctrl-row" style="align-items:flex-start">
-            <label>Corners handicap<br><span class="hint">(φαβορί − / αουτσάιντερ +)</span></label>
+            <label>Corners Handicap 1st Half<br><span class="hint">(favourite − / underdog +)</span></label>
             <div>
-              <select class="odd-in" id="hcap" style="width:auto;padding-right:26px">
+              <select class="odd-in" id="hcap1h" style="width:auto">
                 <option value="">— OFF</option>
-                <optgroup label="Φαβορί (−)">
-                  <option value="F0.5">Φαβορί −0.5</option>
-                  <option value="F1.5">Φαβορί −1.5</option>
-                  <option value="F2.5">Φαβορί −2.5</option>
-                  <option value="F3.5">Φαβορί −3.5</option>
-                  <option value="F4.5">Φαβορί −4.5</option>
-                  <option value="F5.5">Φαβορί −5.5</option>
+                <optgroup label="Favourite (−)">
+                  <option value="F0.5">Favourite −0.5</option>
+                  <option value="F1.5">Favourite −1.5</option>
+                  <option value="F2.5">Favourite −2.5</option>
+                  <option value="F3.5">Favourite −3.5</option>
+                  <option value="F4.5">Favourite −4.5</option>
                 </optgroup>
-                <optgroup label="Αουτσάιντερ (+)">
-                  <option value="U0.5">Αουτσάιντερ +0.5</option>
-                  <option value="U1.5">Αουτσάιντερ +1.5</option>
-                  <option value="U2.5">Αουτσάιντερ +2.5</option>
-                  <option value="U3.5">Αουτσάιντερ +3.5</option>
-                  <option value="U4.5">Αουτσάιντερ +4.5</option>
-                  <option value="U5.5">Αουτσάιντερ +5.5</option>
+                <optgroup label="Underdog (+)">
+                  <option value="U0.5">Underdog +0.5</option>
+                  <option value="U1.5">Underdog +1.5</option>
+                  <option value="U2.5">Underdog +2.5</option>
+                  <option value="U3.5">Underdog +3.5</option>
+                  <option value="U4.5">Underdog +4.5</option>
+                </optgroup>
+              </select>
+              <div class="hcap-expl" id="hcap1h-expl"></div>
+            </div>
+          </div>
+
+          <div class="ctrl-row" style="align-items:flex-start">
+            <label>Corners Handicap 2nd Half<br><span class="hint">(favourite − / underdog +)</span></label>
+            <div>
+              <select class="odd-in" id="hcap2h" style="width:auto">
+                <option value="">— OFF</option>
+                <optgroup label="Favourite (−)">
+                  <option value="F0.5">Favourite −0.5</option>
+                  <option value="F1.5">Favourite −1.5</option>
+                  <option value="F2.5">Favourite −2.5</option>
+                  <option value="F3.5">Favourite −3.5</option>
+                  <option value="F4.5">Favourite −4.5</option>
+                </optgroup>
+                <optgroup label="Underdog (+)">
+                  <option value="U0.5">Underdog +0.5</option>
+                  <option value="U1.5">Underdog +1.5</option>
+                  <option value="U2.5">Underdog +2.5</option>
+                  <option value="U3.5">Underdog +3.5</option>
+                  <option value="U4.5">Underdog +4.5</option>
+                </optgroup>
+              </select>
+              <div class="hcap-expl" id="hcap2h-expl"></div>
+            </div>
+          </div>
+
+          <div class="ctrl-row" style="align-items:flex-start">
+            <label>Corners Handicap Match<br><span class="hint">(favourite − / underdog +)</span></label>
+            <div>
+              <select class="odd-in" id="hcap" style="width:auto">
+                <option value="">— OFF</option>
+                <optgroup label="Favourite (−)">
+                  <option value="F0.5">Favourite −0.5</option>
+                  <option value="F1.5">Favourite −1.5</option>
+                  <option value="F2.5">Favourite −2.5</option>
+                  <option value="F3.5">Favourite −3.5</option>
+                  <option value="F4.5">Favourite −4.5</option>
+                  <option value="F5.5">Favourite −5.5</option>
+                </optgroup>
+                <optgroup label="Underdog (+)">
+                  <option value="U0.5">Underdog +0.5</option>
+                  <option value="U1.5">Underdog +1.5</option>
+                  <option value="U2.5">Underdog +2.5</option>
+                  <option value="U3.5">Underdog +3.5</option>
+                  <option value="U4.5">Underdog +4.5</option>
+                  <option value="U5.5">Underdog +5.5</option>
                 </optgroup>
               </select>
               <div class="hcap-expl" id="hcap-expl"></div>
@@ -516,21 +600,45 @@ table.res th:first-child,table.res td:first-child,table.res td.team{text-align:l
           </div>
 
           <div class="ctrl-row" style="align-items:flex-start">
-            <label>Goals handicap<br><span class="hint">(φαβορί − / αουτσάιντερ +)</span></label>
+            <label>Race to Corners<br><span class="hint">(who reaches X corners first)</span></label>
             <div>
-              <select class="odd-in" id="ghcap" style="width:auto;padding-right:26px">
+              <select class="odd-in" id="race" style="width:auto">
                 <option value="">— OFF</option>
-                <optgroup label="Φαβορί (−)">
-                  <option value="F0.5">Φαβορί −0.5</option>
-                  <option value="F1.5">Φαβορί −1.5</option>
-                  <option value="F2.5">Φαβορί −2.5</option>
-                  <option value="F3.5">Φαβορί −3.5</option>
+                <optgroup label="Favourite reaches first">
+                  <option value="F2">Favourite → 2 corners</option>
+                  <option value="F3">Favourite → 3 corners</option>
+                  <option value="F5">Favourite → 5 corners</option>
+                  <option value="F7">Favourite → 7 corners</option>
+                  <option value="F9">Favourite → 9 corners</option>
                 </optgroup>
-                <optgroup label="Αουτσάιντερ (+)">
-                  <option value="U0.5">Αουτσάιντερ +0.5</option>
-                  <option value="U1.5">Αουτσάιντερ +1.5</option>
-                  <option value="U2.5">Αουτσάιντερ +2.5</option>
-                  <option value="U3.5">Αουτσάιντερ +3.5</option>
+                <optgroup label="Underdog reaches first">
+                  <option value="U2">Underdog → 2 corners</option>
+                  <option value="U3">Underdog → 3 corners</option>
+                  <option value="U5">Underdog → 5 corners</option>
+                  <option value="U7">Underdog → 7 corners</option>
+                  <option value="U9">Underdog → 9 corners</option>
+                </optgroup>
+              </select>
+              <div class="hcap-expl" id="race-expl"></div>
+            </div>
+          </div>
+
+          <div class="ctrl-row" style="align-items:flex-start">
+            <label>Goals Handicap<br><span class="hint">(favourite − / underdog +)</span></label>
+            <div>
+              <select class="odd-in" id="ghcap" style="width:auto">
+                <option value="">— OFF</option>
+                <optgroup label="Favourite (−)">
+                  <option value="F0.5">Favourite −0.5</option>
+                  <option value="F1.5">Favourite −1.5</option>
+                  <option value="F2.5">Favourite −2.5</option>
+                  <option value="F3.5">Favourite −3.5</option>
+                </optgroup>
+                <optgroup label="Underdog (+)">
+                  <option value="U0.5">Underdog +0.5</option>
+                  <option value="U1.5">Underdog +1.5</option>
+                  <option value="U2.5">Underdog +2.5</option>
+                  <option value="U3.5">Underdog +3.5</option>
                 </optgroup>
               </select>
               <div class="hcap-expl" id="ghcap-expl"></div>
@@ -556,8 +664,6 @@ table.res th:first-child,table.res td:first-child,table.res td.team{text-align:l
               <input class="odd-in" id="fav-min" placeholder="από" inputmode="decimal" style="width:74px">
               <span style="color:var(--faint);font-family:var(--mono)">—</span>
               <input class="odd-in" id="fav-max" placeholder="έως" inputmode="decimal" style="width:74px">
-              <button class="histbtn" id="undo" title="Αναίρεση επιλογής" aria-label="Undo" disabled>↶</button>
-              <button class="histbtn" id="redo" title="Επαναφορά επιλογής" aria-label="Redo" disabled>↷</button>
             </div>
           </div>
 
@@ -624,6 +730,7 @@ const COL = l => { let n=0; for(const c of l) n=n*26+(c.charCodeAt(0)-64); retur
 function normDiscrete(x){
   if(x===null||x===undefined) return null;
   let s=String(x).trim().toUpperCase();
+  if(["ODD","EVEN"].includes(s)) return s;
   if(["0","1","2","X"].includes(s)) return s;
   let s2=s.replace(".0","");
   if(["0","1","2"].includes(s2)) return s2;
@@ -675,6 +782,7 @@ const DISCRETE_LIST=[
  "HALF-TIME RESULT (1/2/0)","SECOND HALF RESULT (1/2/0)","FULL-TIME RESULT (1/2/X)","FIRST TEAM TO SCORE (1/2/0)",
  "FIRST CORNER WINNER (1/2/0)","1ST HALF CORNER WINNER (1/2/0)","CORNER WINNER MATCH (1/2/0)",
  "BOTH TEAMS TO SCORE (1/0)","2ND HALF CORNER WINNER",
+ "CORNERS 1ST HALF ODD/EVEN",
  "FIRST 10 MINS CORNER WINNER (1/2/0)","FIRST 10 MINS CORNER WINNER",
  "YELLOW CARDS FIRST HALF TIME RESULT (1/2/0)","YELLOW CARDS FIRST HALF RESULT",
  "YELLOW CARDS 2ND HALF RESULT (1/2/0)","FIRST YELLOW CARD (1/2/0)",
@@ -702,6 +810,12 @@ const SWAP_MAP={H:"I",I:"H",J:"K",K:"J",L:"M",M:"L",R:"S",S:"R",T:"U",U:"T",AM:"
 
 function getActual(cat,row,swap){
   const cn=normCat(cat);
+  if(cn===normCat("CORNERS 1ST HALF ODD/EVEN")){
+    let x=normFloat(row.X);
+    if(x===null){ const r=normFloat(row.R),s=normFloat(row.S); if(r!==null||s!==null) x=(r||0)+(s||0); }
+    if(x===null) return null;
+    return (Math.round(x)%2===0)?"EVEN":"ODD";
+  }
   if(cn===normCat("SECOND HALF RESULT (1/2/0)")){
     let j=normFloat(row.J), k=normFloat(row.K);
     if(j===null){ const l=normFloat(row.L),h=normFloat(row.H); if(l!==null&&h!==null) j=l-h; }
@@ -709,6 +823,36 @@ function getActual(cat,row,swap){
     if(j===null||k===null) return null;
     if(Math.abs(j-k)<1e-9) return "0";
     return j>k?"1":"2";
+  }
+  if(cn===normCat("FULL-TIME FAVOURITE CARDS")||cn===normCat("FULL-TIME UNDERDOG CARDS")){
+    const oh=normFloat(row.E), oa=normFloat(row.G);
+    if(oh===null||oa===null||oh===oa) return null;
+    const favHome=oh<oa;
+    const hCards=(normFloat(row.AM)||0)+(normFloat(row.AO)||0);
+    const aCards=(normFloat(row.AN)||0)+(normFloat(row.AP)||0);
+    if(normFloat(row.AM)===null&&normFloat(row.AO)===null) return null;
+    const favCards=favHome?hCards:aCards, dogCards=favHome?aCards:hCards;
+    return cn===normCat("FULL-TIME FAVOURITE CARDS")?favCards:dogCards;
+  }
+  if(cn===normCat("FIRST 10 MINS CORNER WINNER")){
+    const ft=firstTenCorners(row); if(!ft) return null;
+    if(ft.h===ft.a) return "0";
+    return ft.h>ft.a?"1":"2";
+  }
+  if(cn===normCat("FIRST 10 MINS UNDER OVER 0.5")){
+    const ft=firstTenCorners(row); if(!ft) return null;
+    return ft.h+ft.a;
+  }
+  if(cn===normCat("FIRST 10 MINS FAVOURITE CORNERS")||cn===normCat("FIRST 10 MINS UNDERDOG CORNERS")){
+    const oh=normFloat(row.E), oa=normFloat(row.G);
+    if(oh===null||oa===null||oh===oa) return null;
+    const ft=firstTenCorners(row); if(!ft) return null;
+    const favHome=oh<oa;
+    const favC=favHome?ft.h:ft.a, dogC=favHome?ft.a:ft.h;
+    return cn===normCat("FIRST 10 MINS FAVOURITE CORNERS")?favC:dogC;
+  }
+  if(cn===normCat("FIRST 10 MINS GOALS UNDER OVER 0.5")){
+    const n=firstTenGoals(row); if(n===null) return null; return n;
   }
   if(cn===normCat("SECOND HALF FAVOURITE GOALS")||cn===normCat("SECOND HALF UNDERDOG GOALS")){
     const oh=normFloat(row.E), oa=normFloat(row.G);
@@ -815,23 +959,37 @@ function analyze(matches,legs,defineHome,avgOdd,favMin,favMax){
     let allOk=true, missingData=false; const acts={};
     for(const leg of legs){
       if(leg.cornersH!==undefined){
-        // Corners handicap: favourite (−h) or underdog (+h), total match corners
+        // Corners handicap: favourite (−h) or underdog (+h), ανα period (1H/2H/MATCH)
+        const period=leg.cornersH.period||"MATCH";
+        const catName = period==="1H" ? "CORNERS HANDICAP 1ST HALF"
+                      : period==="2H" ? "CORNERS HANDICAP 2ND HALF"
+                      : "CORNERS HANDICAP";
         const foh=normFloat(oh), foa=normFloat(oa);
         let legOk=false, scoreStr="–";
         if(foh!==null && foa!==null && foh!==foa){
           const favIsHome=foh<foa;
-          if(normFloat(m.R)===null&&normFloat(m.T)===null&&normFloat(m.S)===null&&normFloat(m.U)===null) missingData=true;
-          const homeTot=(normFloat(m.R)||0)+(normFloat(m.T)||0);
-          const awayTot=(normFloat(m.S)||0)+(normFloat(m.U)||0);
+          let homeTot, awayTot, anyData;
+          if(period==="1H"){
+            anyData = normFloat(m.R)!==null||normFloat(m.S)!==null;
+            homeTot=(normFloat(m.R)||0); awayTot=(normFloat(m.S)||0);
+          } else if(period==="2H"){
+            anyData = normFloat(m.T)!==null||normFloat(m.U)!==null;
+            homeTot=(normFloat(m.T)||0); awayTot=(normFloat(m.U)||0);
+          } else {
+            anyData = normFloat(m.R)!==null||normFloat(m.T)!==null||normFloat(m.S)!==null||normFloat(m.U)!==null;
+            homeTot=(normFloat(m.R)||0)+(normFloat(m.T)||0);
+            awayTot=(normFloat(m.S)||0)+(normFloat(m.U)||0);
+          }
+          if(!anyData) missingData=true;
           const favTot=favIsHome?homeTot:awayTot;
           const dogTot=favIsHome?awayTot:homeTot;
           const h=leg.cornersH.h;
           if(leg.cornersH.side==="F"){ const eff=favTot-h; legOk=eff>dogTot; scoreStr=`${eff}-${dogTot}`; }
           else { const eff=dogTot+h; legOk=eff>favTot; scoreStr=`${favTot}-${eff}`; }
-          usage["CORNERS HANDICAP"]++;
+          usage[catName]=(usage[catName]||0)+1;
         }
         allOk=allOk&&legOk;
-        acts["CORNERS HANDICAP"]=scoreStr;
+        acts[catName]=scoreStr;
         continue;
       }
       if(leg.goalsH!==undefined){
@@ -850,6 +1008,24 @@ function analyze(matches,legs,defineHome,avgOdd,favMin,favMax){
         }
         allOk=allOk&&legOk;
         acts["GOALS HANDICAP"]=scoreStr;
+        continue;
+      }
+      if(leg.race!==undefined){
+        const foh=normFloat(oh), foa=normFloat(oa);
+        let legOk=false, scoreStr="–";
+        if(foh!==null && foa!==null && foh!==foa){
+          if(!hasMarkers(m.AW)) missingData=true;
+          else {
+            const favIsHome=foh<foa, favHA=favIsHome?"H":"A";
+            const winner=raceWinner(m.AW, leg.race.target);
+            const want = leg.race.side==="F" ? favHA : (favIsHome?"A":"H");
+            legOk = (winner!==null && winner===want);
+            scoreStr = winner ? (winner===favHA?"ΦΑΒ":"ΑΟΥΤ") : "—";
+            usage["RACE TO CORNERS"]++;
+          }
+        }
+        allOk=allOk&&legOk;
+        acts["RACE TO CORNERS"]=scoreStr;
         continue;
       }
       const raw=getActual(leg.cat,m,false);
@@ -930,6 +1106,20 @@ function firstEvt(tlStr){
   return best;
 }
 function firstEvtTeam(side){ return side==="H"?"Γηπεδ.":"Φιλοξ."; }
+// Κόρνερ στα πρώτα 10' ανά ομάδα, από το corner timeline (AW). null αν δεν υπάρχουν δεδομένα.
+function firstTenCorners(m){
+  if(!m||!hasMarkers(m.AW)) return null;
+  let h=0,a=0;
+  for(const e of parseTL(m.AW)){ if(e.period==="1ST" && e.eff<=10){ if(e.side==="H") h++; else a++; } }
+  return {h,a};
+}
+// Σύνολο γκολ στα πρώτα 10', από το goal timeline (AY). null αν δεν υπάρχουν δεδομένα.
+function firstTenGoals(m){
+  if(!m||!hasMarkers(m.AY)) return null;
+  let n=0;
+  for(const e of parseTL(m.AY)){ if(e.period==="1ST" && e.eff<=10) n++; }
+  return n;
+}
 // επιστρέφει " (12′ Γηπεδ.)" για FIRST CORNER/FIRST GOAL, αλλιώς ""
 function firstEvtSuffix(m,cat){
   const cn=normCat(cat);
@@ -1006,8 +1196,27 @@ function evalCornersH(leg,m,oh,oa){
   if(leg.cornersH.side==="F") return (favTot-h)>dogTot;
   return (dogTot+h)>favTot;
 }
-function evalGoalsH(leg,m,oh,oa){
+function raceWinner(tlStr,target){
+  const ev=parseTL(tlStr); if(!ev.length) return null;
+  ev.sort((a,b)=>((a.period==="1ST"?0:1e5)+a.eff)-((b.period==="1ST"?0:1e5)+b.eff));
+  let h=0,a=0;
+  for(const e of ev){
+    if(e.side==="H"){ h++; if(h>=target) return "H"; }
+    else { a++; if(a>=target) return "A"; }
+  }
+  return null;
+}
+function evalRace(leg,m,oh,oa){
   const foh=normFloat(oh), foa=normFloat(oa);
+  if(foh===null||foa===null||foh===foa) return false;
+  if(!hasMarkers(m.AW)) return false;
+  const favIsHome=foh<foa;
+  const winner=raceWinner(m.AW, leg.race.target);
+  if(winner===null) return false;
+  const want = leg.race.side==="F" ? (favIsHome?"H":"A") : (favIsHome?"A":"H");
+  return winner===want;
+}
+function evalGoalsH(leg,m,oh,oa){  const foh=normFloat(oh), foa=normFloat(oa);
   if(foh===null||foa===null||foh===foa) return false;
   const favIsHome=foh<foa;
   const lg=normFloat(m.L), mg=normFloat(m.M);
@@ -1022,6 +1231,7 @@ function evalLegsState(legs,v,oh,oa,side){
     let legOk;
     if(leg.cornersH!==undefined){ legOk=evalCornersH(leg,v,oh,oa); }
     else if(leg.goalsH!==undefined){ legOk=evalGoalsH(leg,v,oh,oa); }
+    else if(leg.race!==undefined){ legOk=evalRace(leg,v,oh,oa); }
     else{
       let actual=getActual(leg.cat,v,swap);
       const disc=DISCRETE_CATS.has(normCat(leg.cat));
@@ -1101,20 +1311,24 @@ const CATS=[
    ["SECOND HALF FAVOURITE GOALS",false],["SECOND HALF UNDERDOG GOALS",false],
    ["FULL-TIME RESULT (1/2/X)",true],["BOTH TEAMS TO SCORE (1/0)",true],
    ["TOTAL GOALS 1ST HALF",false],["TOTAL GOALS 2ND HALF",false],
+   ["FIRST 10 MINS GOALS UNDER OVER 0.5",false],
  ]],
  ["CORNERS",[
    ["FIRST CORNER WINNER (1/2/0)",true],["FIRST 10 MINS CORNER WINNER",true],
    ["FIRST 10 MINS UNDER OVER 0.5",false],
+   ["FIRST 10 MINS FAVOURITE CORNERS",false],["FIRST 10 MINS UNDERDOG CORNERS",false],
    ["1ST HALF HOME CORNERS",false],["1ST HALF AWAY CORNERS",false],
    ["2ND HALF HOME CORNERS",false],["2ND HALF AWAY CORNERS",false],
    ["1ST HALF CORNER WINNER (1/2/0)",true],["CORNER WINNER MATCH (1/2/0)",true],
    ["2ND HALF CORNER WINNER",true],
    ["TOTAL CORNERS 1ST HALF",false],["TOTAL CORNERS MATCH",false],
+   ["CORNERS 1ST HALF ODD/EVEN",true],
    ["HOME CORNERS TOTAL",false],["AWAY CORNERS TOTAL",false],
  ]],
  ["YELLOWS / OTHER",[
    ["FIRST HALF HOME TEAM OVER UNDER YELLOWS",false],["FIRST HALF AWAY TEAM OVER UNDER YELLOWS",false],
    ["SECOND HALF HOME TEAM OVER UNDER YELLOWS",false],["SECOND HALF AWAY TEAM OVER UNDER YELLOWS",false],
+   ["FULL-TIME FAVOURITE CARDS",false],["FULL-TIME UNDERDOG CARDS",false],
    ["TOTAL YELLOWS 1ST HALF",false],["TOTAL YELLOWS MATCH",false],
    ["FIRST YELLOW CARD (1/2/0)",true],
    ["YELLOW CARDS FIRST HALF RESULT",true],["YELLOW CARDS 2ND HALF RESULT (1/2/0)",true],["YELLOW CARDS MATCH RESULT",true],
@@ -1148,6 +1362,7 @@ function discOps(){return `<option value="">—</option><option value="=">=</opt
 function numOps(){return `<option value="">—</option><option value="OVER">OVER</option><option value="UNDER">UNDER</option><option value="=">=</option><option value="≠">≠</option>`;}
 function discDomain(cat){
   const c=cat.toUpperCase();
+  if(c.includes("ODD")) return ["ODD","EVEN"];
   if(c.includes("1/2/X")) return ["1","X","2"];
   if(c.includes("1/0")) return ["1","0"];
   return ["1","2","0"];
@@ -1207,7 +1422,8 @@ function buildLegs(){
       host.appendChild(row);
       const op1=row.querySelector(".op1"),v1=row.querySelector(".v1"),op2=row.querySelector(".op2"),v2=row.querySelector(".v2");
       if(d.op1){op1.value=d.op1==="!="?"≠":d.op1; v1.value=d.val1||"";}
-      [op1,v1,op2,v2].forEach(el=>el.addEventListener("input",()=>{refreshRow(row);histSnap(el.tagName==="SELECT");}));
+      [op1,op2].forEach(sel=>sel.addEventListener("input",()=>{refreshRow(row);histSnap(true);}));
+      [v1,v2].forEach(t=>{ t.addEventListener("input",()=>refreshRow(row)); t.addEventListener("change",()=>histSnap(true)); });
       row.querySelectorAll(".dec").forEach(b=>b.addEventListener("click",()=>{stepValue(row,b.dataset.w,-1);histSnap(true);}));
       row.querySelectorAll(".inc").forEach(b=>b.addEventListener("click",()=>{stepValue(row,b.dataset.w,+1);histSnap(true);}));
       row.querySelector(".status").addEventListener("click",()=>{
@@ -1243,7 +1459,10 @@ function loadPatternObj(obj){
   if(obj.avgOdd!=null) document.getElementById("avg-odd").value=obj.avgOdd;
   let hc=obj.hcap||""; if(hc && !/^[FU]/.test(hc)) hc="U"+hc;
   document.getElementById("hcap").value = hc; refreshHcap();
+  document.getElementById("hcap1h").value = obj.hcap1h||""; refreshHcapPeriod("1H");
+  document.getElementById("hcap2h").value = obj.hcap2h||""; refreshHcapPeriod("2H");
   document.getElementById("ghcap").value = obj.ghcap||""; refreshGhcap();
+  document.getElementById("race").value = obj.race||""; refreshRace();
   document.getElementById("fav-min").value = obj.favMin||"";
   document.getElementById("fav-max").value = obj.favMax||"";
 }
@@ -1256,7 +1475,8 @@ function currentPatternObj(){
     p[row.dataset.cat]={op1,val1:v1,op2,val2:v2};
   });
   return {pattern:p,side:SIDE,avgOdd:document.getElementById("avg-odd").value,hcap:document.getElementById("hcap").value,
-    ghcap:document.getElementById("ghcap").value,
+    hcap1h:document.getElementById("hcap1h").value,hcap2h:document.getElementById("hcap2h").value,
+    ghcap:document.getElementById("ghcap").value,race:document.getElementById("race").value,
     favMin:document.getElementById("fav-min").value,favMax:document.getElementById("fav-max").value};
 }
 
@@ -1564,10 +1784,19 @@ function render(res){
 }
 
 function legHighlightCols(leg,swap){
-  if(leg.cornersH!==undefined) return ["R","S","T","U"];
+  if(leg.race!==undefined) return ["AW"];
+  if(leg.cornersH!==undefined){
+    const per=leg.cornersH.period||"MATCH";
+    if(per==="1H") return ["R","S"];
+    if(per==="2H") return ["T","U"];
+    return ["R","S","T","U"];
+  }
   if(leg.goalsH!==undefined) return ["L","M"];
   const cn=normCat(leg.cat);
   if(cn===normCat("SECOND HALF RESULT (1/2/0)")) return ["J","K"];
+  if(cn===normCat("FIRST 10 MINS GOALS UNDER OVER 0.5")) return ["AY"];
+  if(cn===normCat("FIRST 10 MINS CORNER WINNER")||cn===normCat("FIRST 10 MINS UNDER OVER 0.5")||cn===normCat("FIRST 10 MINS FAVOURITE CORNERS")||cn===normCat("FIRST 10 MINS UNDERDOG CORNERS")) return ["AW"];
+  if(cn===normCat("FULL-TIME FAVOURITE CARDS")||cn===normCat("FULL-TIME UNDERDOG CARDS")) return ["AM","AN","AO","AP"];
   if(cn===normCat("SECOND HALF FAVOURITE GOALS")||cn===normCat("SECOND HALF UNDERDOG GOALS")) return ["J","K"];
   if(cn===normCat("2ND HALF CORNER WINNER")) return ["T","U"];
   if(cn===normCat("HOME CORNERS TOTAL")) return swap?["S","U"]:["R","T"];
@@ -1751,26 +1980,53 @@ function refreshHcap(){
   const sel=document.getElementById("hcap"); sel.classList.toggle("set",v!=="");
   if(!v){ el.textContent=""; return; }
   const side=v[0], h=v.slice(1);
-  if(side==="F") el.innerHTML=`Κερδίζει αν: <b>κόρνερ φαβορί −${h} &gt; κόρνερ αουτσάιντερ</b>.`;
-  else el.innerHTML=`Κερδίζει αν: <b>κόρνερ αουτσάιντερ +${h} &gt; κόρνερ φαβορί</b>.`;
+  if(side==="F") el.innerHTML=`Wins if: <b>favourite corners −${h} &gt; underdog corners</b>.`;
+  else el.innerHTML=`Wins if: <b>underdog corners +${h} &gt; favourite corners</b>.`;
 }
 document.getElementById("hcap").addEventListener("change",refreshHcap);
+function refreshHcapPeriod(which){
+  const id = which==="1H" ? "hcap1h" : "hcap2h";
+  const v=document.getElementById(id).value, el=document.getElementById(id+"-expl");
+  const sel=document.getElementById(id); sel.classList.toggle("set",v!=="");
+  if(!v){ el.textContent=""; return; }
+  const side=v[0], h=v.slice(1);
+  const per = which==="1H" ? "1st-half" : "2nd-half";
+  if(side==="F") el.innerHTML=`Wins if: <b>${per} favourite corners −${h} &gt; underdog</b>.`;
+  else el.innerHTML=`Wins if: <b>${per} underdog corners +${h} &gt; favourite</b>.`;
+}
+document.getElementById("hcap1h").addEventListener("change",()=>{refreshHcapPeriod("1H");histSnap(true);});
+document.getElementById("hcap2h").addEventListener("change",()=>{refreshHcapPeriod("2H");histSnap(true);});
 function refreshGhcap(){
   const v=document.getElementById("ghcap").value, el=document.getElementById("ghcap-expl");
   const sel=document.getElementById("ghcap"); sel.classList.toggle("set",v!=="");
   if(!v){ el.textContent=""; return; }
   const side=v[0], h=v.slice(1);
-  if(side==="F") el.innerHTML=`Κερδίζει αν: <b>γκολ φαβορί −${h} &gt; γκολ αουτσάιντερ</b>.`;
-  else el.innerHTML=`Κερδίζει αν: <b>γκολ αουτσάιντερ +${h} &gt; γκολ φαβορί</b>.`;
+  if(side==="F") el.innerHTML=`Wins if: <b>favourite goals −${h} &gt; underdog goals</b>.`;
+  else el.innerHTML=`Wins if: <b>underdog goals +${h} &gt; favourite goals</b>.`;
 }
 document.getElementById("ghcap").addEventListener("change",refreshGhcap);
+function refreshRace(){
+  const v=document.getElementById("race").value, el=document.getElementById("race-expl");
+  const sel=document.getElementById("race"); sel.classList.toggle("set",v!=="");
+  if(!v){ el.textContent=""; return; }
+  const side=v[0], n=v.slice(1);
+  const who=side==="F"?"favourite":"underdog";
+  el.innerHTML=`Wins if: <b>the ${who} reaches ${n} corners first</b> (before the opponent).`;
+}
+document.getElementById("race").addEventListener("change",refreshRace);
 
 document.getElementById("run").addEventListener("click",()=>{
   const legs=readPattern();
   const hsel=document.getElementById("hcap").value;
-  if(hsel) legs.push({cat:"CORNERS HANDICAP",cornersH:{side:hsel[0],h:parseFloat(hsel.slice(1))}});
+  if(hsel) legs.push({cat:"CORNERS HANDICAP",cornersH:{side:hsel[0],h:parseFloat(hsel.slice(1)),period:"MATCH"}});
+  const h1sel=document.getElementById("hcap1h").value;
+  if(h1sel) legs.push({cat:"CORNERS HANDICAP 1ST HALF",cornersH:{side:h1sel[0],h:parseFloat(h1sel.slice(1)),period:"1H"}});
+  const h2sel=document.getElementById("hcap2h").value;
+  if(h2sel) legs.push({cat:"CORNERS HANDICAP 2ND HALF",cornersH:{side:h2sel[0],h:parseFloat(h2sel.slice(1)),period:"2H"}});
   const gsel=document.getElementById("ghcap").value;
   if(gsel) legs.push({cat:"GOALS HANDICAP",goalsH:{side:gsel[0],h:parseFloat(gsel.slice(1))}});
+  const rsel=document.getElementById("race").value;
+  if(rsel) legs.push({cat:"RACE TO CORNERS",race:{side:rsel[0],target:parseInt(rsel.slice(1),10)}});
   if(!legs.length){toast("Όρισε τουλάχιστον ένα leg ή handicap.");return;}
   const all=[]; LEAGUES.forEach(l=>{ if(l.enabled!==false) all.push(...l.matches); });
   if(!all.length){toast("Φόρτωσε ή ενεργοποίησε δεδομένα πρώτα.");return;}
@@ -1808,6 +2064,8 @@ function describeLegs(obj){
     if(parts.length) lines.push(`${sideLabel(shortCat(cat),obj.side)}  ${parts.join("  &  ")}`);
   }));
   if(obj.hcap){ let v=obj.hcap; if(!/^[FU]/.test(v)) v="U"+v; const s=v[0],hh=v.slice(1); lines.push(`CORNERS HANDICAP  ${s==="F"?"φαβορί −":"αουτσάιντερ +"}${hh}`); }
+  if(obj.hcap1h){ const s=obj.hcap1h[0], hh=obj.hcap1h.slice(1); lines.push(`CORNERS HANDICAP 1ST HALF  ${s==="F"?"φαβορί −":"αουτσάιντερ +"}${hh}`); }
+  if(obj.hcap2h){ const s=obj.hcap2h[0], hh=obj.hcap2h.slice(1); lines.push(`CORNERS HANDICAP 2ND HALF  ${s==="F"?"φαβορί −":"αουτσάιντερ +"}${hh}`); }
   if(obj.ghcap){ const s=obj.ghcap[0], hh=obj.ghcap.slice(1); lines.push(`GOALS HANDICAP  ${s==="F"?"φαβορί −":"αουτσάιντερ +"}${hh}`); }
   if(obj.favMin||obj.favMax) lines.push(`ΦΙΛΤΡΟ απόδοσης φαβορί  ${obj.favMin||"–"}–${obj.favMax||"–"}`);
   return lines;
@@ -1823,7 +2081,7 @@ const saveModal=document.getElementById("save-modal"), libModal=document.getElem
 
 document.getElementById("save").addEventListener("click",()=>{
   const obj=currentPatternObj();
-  if(!Object.keys(obj.pattern).length && !obj.hcap){toast("Δεν υπάρχει pattern για αποθήκευση.");return;}
+  if(!Object.keys(obj.pattern).length && !obj.hcap && !obj.hcap1h && !obj.hcap2h && !obj.ghcap && !obj.race){toast("Δεν υπάρχει pattern για αποθήκευση.");return;}
   document.getElementById("save-name").value="";
   document.getElementById("save-note").value="";
   document.getElementById("save-desc").innerHTML=descHtml(obj);
@@ -1913,21 +2171,48 @@ function histSnap(immediate){
   clearTimeout(HTIMER);
   if(immediate) take(); else HTIMER=setTimeout(take,300);
 }
-function _applyState(s){ HLOCK=true; try{ loadPatternObj(JSON.parse(s)); }catch(e){} HLOCK=false; updHistBtns(); }
+function _flashEl(el){ if(!el) return; el.classList.remove("flash-hl"); void el.offsetWidth; el.classList.add("flash-hl"); setTimeout(()=>el.classList.remove("flash-hl"),1100); }
+function _diffTargets(prev,next){
+  const t=[];
+  [["avgOdd","avg-odd"],["favMin","fav-min"],["favMax","fav-max"],["hcap","hcap"],["ghcap","ghcap"]].forEach(([k,id])=>{
+    if((prev[k]||"")!==(next[k]||"")){ const el=document.getElementById(id); if(el) t.push(el); }
+  });
+  if(prev.side!==next.side){ const el=document.getElementById("seg-side"); if(el) t.push(el); }
+  const cats=new Set([...Object.keys(prev.pattern||{}),...Object.keys(next.pattern||{})]);
+  cats.forEach(cat=>{
+    const a=JSON.stringify((prev.pattern||{})[cat]||null), b=JSON.stringify((next.pattern||{})[cat]||null);
+    if(a!==b){ const el=document.querySelector('.leg[data-cat="'+cat+'"]'); if(el) t.push(el); }
+  });
+  return t;
+}
+function _applyState(s){
+  const prev=currentPatternObj(); let next=null;
+  HLOCK=true; try{ next=JSON.parse(s); loadPatternObj(next); }catch(e){} HLOCK=false;
+  updHistBtns();
+  if(next){
+    const targets=_diffTargets(prev,next);
+    if(targets.length){
+      try{ targets[0].scrollIntoView({behavior:"smooth",block:"center"}); }catch(e){ try{targets[0].scrollIntoView();}catch(_){} }
+      targets.forEach(_flashEl);
+    }
+  }
+}
 function histUndo(){ clearTimeout(HTIMER); if(HI>0){ HI--; _applyState(HIST[HI]); } }
 function histRedo(){ clearTimeout(HTIMER); if(HI<HIST.length-1){ HI++; _applyState(HIST[HI]); } }
 function updHistBtns(){ const u=document.getElementById("undo"),r=document.getElementById("redo");
   if(u) u.disabled=HI<=0; if(r) r.disabled=HI>=HIST.length-1; }
 document.getElementById("undo").addEventListener("click",histUndo);
 document.getElementById("redo").addEventListener("click",histRedo);
-["fav-min","fav-max","avg-odd"].forEach(id=>{const el=document.getElementById(id); if(el) el.addEventListener("input",()=>histSnap(false));});
+["fav-min","fav-max","avg-odd"].forEach(id=>{const el=document.getElementById(id); if(el) el.addEventListener("change",()=>histSnap(true));});
 document.getElementById("hcap").addEventListener("change",()=>histSnap(true));
 document.getElementById("ghcap").addEventListener("change",()=>histSnap(true));
+document.getElementById("race").addEventListener("change",()=>histSnap(true));
 
 /* init */
 buildLegs();
 refreshHcap();
 refreshGhcap();
+refreshRace();
 loadLibrary();
 histSnap(true); /* baseline */
 </script>
