@@ -454,6 +454,28 @@ select.odd-in.set, .leg select.set, select.odd-in:focus, .leg select:focus{
 .stp button{color:var(--ink)}
 .stp button:hover{background:var(--amber-dim);color:var(--amber)}
 .leg.active .stp button{color:var(--amber)}
+/* ===== mode tabs (Pattern Builder / Live Pattern) ===== */
+.mode-tabs{display:flex;gap:6px;background:rgba(0,0,0,.30);border:1px solid var(--line2);border-radius:10px;padding:4px}
+.mode-tab{font-family:var(--disp);font-weight:600;font-size:13px;letter-spacing:1.2px;text-transform:uppercase;
+  color:var(--muted);background:transparent;border:none;border-radius:7px;padding:7px 14px;cursor:pointer;transition:all .15s}
+.mode-tab:hover{color:var(--ink)}
+.mode-tab.on{background:var(--amber);color:#10231a;box-shadow:0 0 14px rgba(255,210,74,.35)}
+/* ===== live state box ===== */
+#live-box{background:rgba(255,210,74,.06);border:1px solid rgba(255,210,74,.30);border-radius:12px;padding:14px 14px 12px;margin-bottom:14px}
+.live-head{font-family:var(--disp);font-weight:600;font-size:14px;letter-spacing:.8px;color:var(--amber);margin-bottom:10px}
+.live-head .hint{font-family:var(--body);font-weight:400;font-size:11px;letter-spacing:0;color:var(--muted);text-transform:none}
+.live-grid{display:flex;flex-wrap:wrap;gap:12px}
+.live-cell{display:flex;flex-direction:column;gap:5px}
+.live-cell label{font-size:11px;letter-spacing:.6px;color:var(--muted);text-transform:uppercase}
+.live-cell input{font-family:var(--mono);font-size:15px;text-align:center;background:var(--bg);color:var(--ink);
+  border:1px solid var(--line2);border-radius:8px;height:40px;width:62px;padding:4px}
+.live-cell input:focus{outline:none;border-color:var(--amber);color:var(--amber)}
+.live-min-cell input{width:84px}
+.live-pair{display:flex;align-items:center;gap:6px}
+.live-pair span{color:var(--muted);font-weight:700}
+.live-note{margin-top:11px;font-size:11.5px;line-height:1.45;color:var(--muted)}
+.live-note b{color:var(--ink)}
+@media(max-width:600px){ .live-grid{gap:10px} .live-cell input{height:44px} }
 /* ==================== /STADIUM / PITCH SKIN ==================== */
 </style>
 </head>
@@ -521,8 +543,35 @@ select.odd-in.set, .leg select.set, select.odd-in:focus, .leg select:focus{
       </div>
 
       <div class="panel">
-        <div class="panel-h"><span class="dot"></span><h2>Pattern Builder</h2></div>
+        <div class="panel-h"><span class="dot"></span>
+          <div class="mode-tabs">
+            <button type="button" class="mode-tab on" data-mode="builder">PATTERN BUILDER</button>
+            <button type="button" class="mode-tab" data-mode="live">LIVE PATTERN</button>
+          </div>
+        </div>
         <div class="panel-b">
+          <div id="live-box" style="display:none">
+            <div class="live-head">⚡ Κατάσταση αγώνα <span class="hint">(φαβορί – αουτσάιντερ, κατά διαφορά)</span></div>
+            <div class="live-grid">
+              <div class="live-cell live-min-cell">
+                <label>Λεπτό</label>
+                <input type="number" id="live-min" min="1" max="120" placeholder="π.χ. 15">
+              </div>
+              <div class="live-cell">
+                <label>Γκολ (Φαβ – Άουτ)</label>
+                <div class="live-pair"><input type="number" id="live-gf" min="0" placeholder="Φ"><span>–</span><input type="number" id="live-gd" min="0" placeholder="Α"></div>
+              </div>
+              <div class="live-cell">
+                <label>Κόρνερ (Φαβ – Άουτ)</label>
+                <div class="live-pair"><input type="number" id="live-cf" min="0" placeholder="Φ"><span>–</span><input type="number" id="live-cd" min="0" placeholder="Α"></div>
+              </div>
+              <div class="live-cell">
+                <label>Κάρτες (Φαβ – Άουτ)</label>
+                <div class="live-pair"><input type="number" id="live-kf" min="0" placeholder="Φ"><span>–</span><input type="number" id="live-kd" min="0" placeholder="Α"></div>
+              </div>
+            </div>
+            <div class="live-note">Βρίσκει ματς που <b>pre-game</b> είχαν την απόδοση φαβορί που όρισες <b>και</b> στο λεπτό αυτό είχαν αυτή τη <b>διαφορά</b> (π.χ. +1 γκολ = και 1-0 και 2-1). Μετά ελέγχει το pattern σου με την προσφερόμενη απόδοση.</div>
+          </div>
           <div id="legs"></div>
 
           <div class="ctrl-row" style="align-items:flex-start">
@@ -944,9 +993,89 @@ function colLetter(j){let s="";j+=1;while(j>0){let m=(j-1)%26;s=String.fromCharC
 
 /* run analysis */
 const RANGES=[[1.01,1.40],[1.41,1.80],[1.81,2.20],[2.21,2.80]];
+// ===== LIVE PATTERN: κατάσταση αγώνα στο λεπτό Μ (κατά διαφορά φαβορί−αουτσάιντερ) =====
+function getLiveSpec(){
+  if(!LIVEMODE) return null;
+  const M=parseInt((document.getElementById("live-min").value||"").trim(),10);
+  if(!Number.isFinite(M)) return null;
+  const num=id=>{ const v=(document.getElementById(id).value||"").trim(); return v===""?null:parseInt(v,10); };
+  const pair=(f,d)=> (f===null&&d===null)?null:((f||0)-(d||0));
+  const spec={ M,
+    g:pair(num("live-gf"),num("live-gd")),
+    c:pair(num("live-cf"),num("live-cd")),
+    k:pair(num("live-kf"),num("live-kd")) };
+  if(spec.g===null&&spec.c===null&&spec.k===null) return null; // λεπτό χωρίς σκορ → χωρίς φίλτρο
+  return spec;
+}
+function liveCheck(m,favIsHome,spec){
+  const M=spec.M;
+  const marg=(tl)=>{ if(!hasMarkers(tl)) return null; let h=0,a=0;
+    for(const e of parseTL(tl)){ if(e.eff<=M){ if(e.side==="H") h++; else a++; } }
+    return favIsHome?(h-a):(a-h); };
+  if(spec.g!==null){ const v=marg(m.AY); if(v===null||v!==spec.g) return false; }
+  if(spec.c!==null){ const v=marg(m.AW); if(v===null||v!==spec.c) return false; }
+  if(spec.k!==null){ const v=marg(m.AX); if(v===null||v!==spec.k) return false; }
+  return true;
+}
+/* LIVE: φτιαχνει αντιγραφο του row οπου ολες οι στηλες κορνερ/γκολ/καρτων
+   ξαναμετριουνται μετρωντας ΜΟΝΟ events ΜΕΤΑ το λεπτο Μ (eff>M).
+   Ετσι «OVER 0.5 κορνερ φαβορι 1ου ημιχρ.» στο LIVE = επιπλεον κορνερ απο το Μ+ μεχρι το ημιχρονο. */
+function liveAdjustRow(m,M){
+  const r=Object.assign({},m);
+  // βοηθος: μετρα events ανα (period, side) με eff>M απο ενα timeline
+  function tally(tl){
+    const t={"1ST":{H:0,A:0},"2ND":{H:0,A:0}};
+    if(hasMarkers(tl)) for(const e of parseTL(tl)){ if(e.eff>M) t[e.period][e.side]++; }
+    return t;
+  }
+  const onlyIf=(tl)=> hasMarkers(tl); // αν δεν υπαρχει timeline, αφηνουμε το πεδιο null (δεν μετραμε λαθος)
+
+  // --- ΚΟΡΝΕΡ (AW) ---
+  if(onlyIf(m.AW)){
+    const c=tally(m.AW);
+    r.R=c["1ST"].H; r.S=c["1ST"].A; r.T=c["2ND"].H; r.U=c["2ND"].A;
+    r.X=r.R+r.S; r.Y=r.R+r.S+r.T+r.U;
+    r.V = (r.R>r.S)?"1":(r.S>r.R?"2":"0");
+    r.W = ((r.R+r.T)>(r.S+r.U))?"1":(((r.S+r.U)>(r.R+r.T))?"2":"0");
+    const fcE=firstEvtAfter(m.AW,M); r.Q = fcE?(fcE.side==="H"?"1":"2"):"0";
+  } else { r.R=r.S=r.T=r.U=r.X=r.Y=null; r.V=r.W=r.Q=null; }
+
+  // --- ΓΚΟΛ (AY) ---
+  if(onlyIf(m.AY)){
+    const g=tally(m.AY);
+    r.H=g["1ST"].H; r.I=g["1ST"].A; r.J=g["2ND"].H; r.K=g["2ND"].A;
+    r.L=r.H+r.J; r.M=r.I+r.K;
+    r.AA=r.H+r.I; r.AB=r.J+r.K;
+    r.O = (r.H>r.I)?"1":(r.I>r.H?"2":"0");
+    r.P = (r.L>r.M)?"1":(r.M>r.L?"2":"X");
+    r.Z = (r.L>0&&r.M>0)?"1":"0";
+    const fgE=firstEvtAfter(m.AY,M); r.N = fgE?(fgE.side==="H"?"1":"2"):"0";
+  } else { r.H=r.I=r.J=r.K=r.L=r.M=r.AA=r.AB=null; r.O=r.P=r.Z=r.N=null; }
+
+  // --- ΚΑΡΤΕΣ (AX) ---
+  if(onlyIf(m.AX)){
+    const k=tally(m.AX);
+    r.AM=k["1ST"].H; r.AN=k["1ST"].A; r.AO=k["2ND"].H; r.AP=k["2ND"].A;
+    r.AQ=r.AM+r.AN; r.AR=r.AM+r.AN+r.AO+r.AP;
+    r.AT = (r.AM>r.AN)?"1":(r.AN>r.AM?"2":"0");
+    r.AU = (r.AO>r.AP)?"1":(r.AP>r.AO?"2":"0");
+    r.AV = ((r.AM+r.AO)>(r.AN+r.AP))?"1":(((r.AN+r.AP)>(r.AM+r.AO))?"2":"0");
+    const fyE=firstEvtAfter(m.AX,M); r.AS = fyE?(fyE.side==="H"?"1":"2"):"0";
+  } else { r.AM=r.AN=r.AO=r.AP=r.AQ=r.AR=null; r.AT=r.AU=r.AV=r.AS=null; }
+
+  return r;
+}
+/* πρωτο event ΜΕΤΑ το λεπτο Μ (για First Corner/Goal/Yellow στο live) */
+function firstEvtAfter(tl,M){
+  if(!hasMarkers(tl)) return null;
+  let best=null, bord=Infinity;
+  for(const e of parseTL(tl)){ if(e.eff>M){ const ord=(e.period==="1ST"?0:1e5)+e.eff; if(ord<bord){bord=ord;best=e;} } }
+  return best;
+}
 function analyze(matches,legs,defineHome,avgOdd,favMin,favMax){
   const stake=1.0, ao=normFloat(avgOdd)||0;
   const rows=[]; const usage={}; legs.forEach(l=>usage[l.cat]=0);
+  const LIVE_SPEC=getLiveSpec();
   for(const m of matches){
     const oh=m.E,od=m.F,oa=m.G;
     // favourite odd + range filter
@@ -955,6 +1084,10 @@ function analyze(matches,legs,defineHome,avgOdd,favMin,favMax){
     const favOdd=(favHome===null)?null:(favHome?foh0:foa0);
     if(favMin!=null && (favOdd===null || favOdd<favMin-1e-9)) continue;
     if(favMax!=null && (favOdd===null || favOdd>favMax+1e-9)) continue;
+    // LIVE φίλτρο: κράτα μόνο ματς που στο λεπτό Μ είχαν την ίδια διαφορά (αλλιώς εκτός δείγματος)
+    if(LIVE_SPEC){ if(favHome===null || !liveCheck(m,favHome,LIVE_SPEC)) continue; }
+    // Στο LIVE: αξιολογησε τα σκελη ΜΕΤΑ το λεπτο Μ (incremental). Αλλιως κανονικα συνολα.
+    const mm = LIVE_SPEC ? liveAdjustRow(m, LIVE_SPEC.M) : m;
     const swap=determineSwap(defineHome,oh,oa);
     let allOk=true, missingData=false; const acts={};
     for(const leg of legs){
@@ -970,15 +1103,15 @@ function analyze(matches,legs,defineHome,avgOdd,favMin,favMax){
           const favIsHome=foh<foa;
           let homeTot, awayTot, anyData;
           if(period==="1H"){
-            anyData = normFloat(m.R)!==null||normFloat(m.S)!==null;
-            homeTot=(normFloat(m.R)||0); awayTot=(normFloat(m.S)||0);
+            anyData = normFloat(mm.R)!==null||normFloat(mm.S)!==null;
+            homeTot=(normFloat(mm.R)||0); awayTot=(normFloat(mm.S)||0);
           } else if(period==="2H"){
-            anyData = normFloat(m.T)!==null||normFloat(m.U)!==null;
-            homeTot=(normFloat(m.T)||0); awayTot=(normFloat(m.U)||0);
+            anyData = normFloat(mm.T)!==null||normFloat(mm.U)!==null;
+            homeTot=(normFloat(mm.T)||0); awayTot=(normFloat(mm.U)||0);
           } else {
-            anyData = normFloat(m.R)!==null||normFloat(m.T)!==null||normFloat(m.S)!==null||normFloat(m.U)!==null;
-            homeTot=(normFloat(m.R)||0)+(normFloat(m.T)||0);
-            awayTot=(normFloat(m.S)||0)+(normFloat(m.U)||0);
+            anyData = normFloat(mm.R)!==null||normFloat(mm.T)!==null||normFloat(mm.S)!==null||normFloat(mm.U)!==null;
+            homeTot=(normFloat(mm.R)||0)+(normFloat(mm.T)||0);
+            awayTot=(normFloat(mm.S)||0)+(normFloat(mm.U)||0);
           }
           if(!anyData) missingData=true;
           const favTot=favIsHome?homeTot:awayTot;
@@ -998,7 +1131,7 @@ function analyze(matches,legs,defineHome,avgOdd,favMin,favMax){
         let legOk=false, scoreStr="–";
         if(foh!==null && foa!==null && foh!==foa){
           const favIsHome=foh<foa;
-          const lg=normFloat(m.L), mg=normFloat(m.M); // full-time home / away goals
+          const lg=normFloat(mm.L), mg=normFloat(mm.M); // full-time home / away goals
           if(lg!==null && mg!==null){
             const favG=favIsHome?lg:mg, dogG=favIsHome?mg:lg, h=leg.goalsH.h;
             if(leg.goalsH.side==="F"){ const eff=favG-h; legOk=eff>dogG; scoreStr=`${eff}-${dogG}`; }
@@ -1014,10 +1147,10 @@ function analyze(matches,legs,defineHome,avgOdd,favMin,favMax){
         const foh=normFloat(oh), foa=normFloat(oa);
         let legOk=false, scoreStr="–";
         if(foh!==null && foa!==null && foh!==foa){
-          if(!hasMarkers(m.AW)) missingData=true;
+          if(!hasMarkers(mm.AW)) missingData=true;
           else {
             const favIsHome=foh<foa, favHA=favIsHome?"H":"A";
-            const winner=raceWinner(m.AW, leg.race.target);
+            const winner=raceWinner(mm.AW, leg.race.target, LIVE_SPEC?LIVE_SPEC.M:undefined);
             const want = leg.race.side==="F" ? favHA : (favIsHome?"A":"H");
             legOk = (winner!==null && winner===want);
             scoreStr = winner ? (winner===favHA?"ΦΑΒ":"ΑΟΥΤ") : "—";
@@ -1028,8 +1161,8 @@ function analyze(matches,legs,defineHome,avgOdd,favMin,favMax){
         acts["RACE TO CORNERS"]=scoreStr;
         continue;
       }
-      const raw=getActual(leg.cat,m,false);
-      let actual=getActual(leg.cat,m,swap);
+      const raw=getActual(leg.cat,mm,false);
+      let actual=getActual(leg.cat,mm,swap);
       const disc=DISCRETE_CATS.has(normCat(leg.cat));
       if(disc) actual=swapDiscreteValue(actual,swap);
       if(raw!==null && raw!==undefined) usage[leg.cat]++;
@@ -1079,11 +1212,25 @@ function analyze(matches,legs,defineHome,avgOdd,favMin,favMax){
    ============================================================ */
 function jres120(h,a){ return h>a?"1":(a>h?"2":"0"); }
 function jres12X(h,a){ return h>a?"1":(a>h?"2":"X"); }
-function hasMarkers(s){ return typeof s==="string" && /'\(/.test(s); }
+function _normTL(s){
+  // Καθαρισμος ωστε να διαβαζονται ολες οι παραλλαγες:
+  //  • curly/τυπογραφικα αποστροφα ’ ′ ‘ ` -> ίσιο '
+  //  • ελληνικα Η/Α (και πεζα η/α) -> λατινικα H/A
+  //  • αφαιρεση κενων αναμεσα σε αποστροφο και παρενθεση:  45' (H) -> 45'(H)
+  return String(s||"")
+    .replace(/[\u2019\u2018\u02BC\u2032\u0060\u00B4]/g,"'")
+    .replace(/'\s+\(/g,"'(")
+    .replace(/\s+'\(/g,"'(")
+    .replace(/\(\s*([HAΗΑηα])\s*\)/g,(mm,p)=>{
+      const up = (p==="Η"||p==="η")?"H":(p==="Α"||p==="α")?"A":p.toUpperCase();
+      return "("+up+")";
+    });
+}
+function hasMarkers(s){ return typeof s==="string" && /'\(/.test(_normTL(s)); }
 function parseTL(s){
-  const out=[]; if(!hasMarkers(s)) return out;
+  const out=[]; const str=_normTL(s); if(!/'\(/.test(str)) return out;
   const re=/(\d+)(?:\+(\d+))?'\(([HA])\)/g; let m;
-  while((m=re.exec(s))){
+  while((m=re.exec(str))){
     const base=parseInt(m[1],10), extra=m[2]?parseInt(m[2],10):0, side=m[3];
     let period,eff;
     if(base>=90){ period="2ND"; eff=90+extra; }
@@ -1196,8 +1343,9 @@ function evalCornersH(leg,m,oh,oa){
   if(leg.cornersH.side==="F") return (favTot-h)>dogTot;
   return (dogTot+h)>favTot;
 }
-function raceWinner(tlStr,target){
-  const ev=parseTL(tlStr); if(!ev.length) return null;
+function raceWinner(tlStr,target,afterMin){
+  let ev=parseTL(tlStr); if(!ev.length) return null;
+  if(typeof afterMin==="number") ev=ev.filter(e=>e.eff>afterMin);
   ev.sort((a,b)=>((a.period==="1ST"?0:1e5)+a.eff)-((b.period==="1ST"?0:1e5)+b.eff));
   let h=0,a=0;
   for(const e of ev){
@@ -1334,15 +1482,10 @@ const CATS=[
    ["YELLOW CARDS FIRST HALF RESULT",true],["YELLOW CARDS 2ND HALF RESULT (1/2/0)",true],["YELLOW CARDS MATCH RESULT",true],
  ]],
 ];
-const DEFAULT_PATTERN={
- "HALF-TIME RESULT (1/2/0)":{op1:"=",val1:"1"},
- "1ST HALF HOME CORNERS":{op1:"OVER",val1:"3.5"},
- "1ST HALF AWAY CORNERS":{op1:"UNDER",val1:"1.5"},
- "HOME CORNERS TOTAL":{op1:"UNDER",val1:"6.5"},
- "AWAY CORNERS TOTAL":{op1:"OVER",val1:"3.5"},
-};
+const DEFAULT_PATTERN={};
 let LEAGUES=[]; // {name, matches:[]}
 let SIDE="FAVORITE";
+let LIVEMODE=false;
 
 function leagueOf(file){ const lg=LEAGUES.find(l=>l.matches.some(m=>m._file===file)); return lg?lg.name:file; }
 
@@ -2214,6 +2357,15 @@ refreshHcap();
 refreshGhcap();
 refreshRace();
 loadLibrary();
+/* mode tabs: Pattern Builder / Live Pattern */
+document.querySelectorAll(".mode-tab").forEach(tab=>{
+  tab.addEventListener("click",()=>{
+    document.querySelectorAll(".mode-tab").forEach(t=>t.classList.remove("on"));
+    tab.classList.add("on");
+    LIVEMODE = tab.dataset.mode==="live";
+    document.getElementById("live-box").style.display = LIVEMODE ? "" : "none";
+  });
+});
 histSnap(true); /* baseline */
 </script>
 </body>
