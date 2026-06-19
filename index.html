@@ -859,6 +859,13 @@ const SWAP_MAP={H:"I",I:"H",J:"K",K:"J",L:"M",M:"L",R:"S",S:"R",T:"U",U:"T",AM:"
 
 function getActual(cat,row,swap){
   const cn=normCat(cat);
+  if(cn===normCat("TOTAL CORNERS 2ND HALF")){
+    const t=normFloat(row.T), u=normFloat(row.U);
+    if(t!==null||u!==null) return (t||0)+(u||0);
+    const y=normFloat(row.Y), x=normFloat(row.X);
+    if(y!==null&&x!==null) return Math.max(0,y-x);
+    return null;
+  }
   if(cn===normCat("CORNERS 1ST HALF ODD/EVEN")){
     let x=normFloat(row.X);
     if(x===null){ const r=normFloat(row.R),s=normFloat(row.S); if(r!==null||s!==null) x=(r||0)+(s||0); }
@@ -1469,7 +1476,7 @@ const CATS=[
    ["2ND HALF HOME CORNERS",false],["2ND HALF AWAY CORNERS",false],
    ["1ST HALF CORNER WINNER (1/2/0)",true],["CORNER WINNER MATCH (1/2/0)",true],
    ["2ND HALF CORNER WINNER",true],
-   ["TOTAL CORNERS 1ST HALF",false],["TOTAL CORNERS MATCH",false],
+   ["TOTAL CORNERS 1ST HALF",false],["TOTAL CORNERS 2ND HALF",false],["TOTAL CORNERS MATCH",false],
    ["CORNERS 1ST HALF ODD/EVEN",true],
    ["HOME CORNERS TOTAL",false],["AWAY CORNERS TOTAL",false],
  ]],
@@ -1936,6 +1943,7 @@ function legHighlightCols(leg,swap){
   }
   if(leg.goalsH!==undefined) return ["L","M"];
   const cn=normCat(leg.cat);
+  if(cn===normCat("TOTAL CORNERS 2ND HALF")) return ["T","U"];
   if(cn===normCat("SECOND HALF RESULT (1/2/0)")) return ["J","K"];
   if(cn===normCat("FIRST 10 MINS GOALS UNDER OVER 0.5")) return ["AY"];
   if(cn===normCat("FIRST 10 MINS CORNER WINNER")||cn===normCat("FIRST 10 MINS UNDER OVER 0.5")||cn===normCat("FIRST 10 MINS FAVOURITE CORNERS")||cn===normCat("FIRST 10 MINS UNDERDOG CORNERS")) return ["AW"];
