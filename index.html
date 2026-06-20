@@ -366,6 +366,19 @@ select.odd-in option:checked,.leg select option:checked{
   background:radial-gradient(circle,rgba(255,210,74,.16),transparent 70%);pointer-events:none}
 .verdict .tag{font-family:var(--disp);font-weight:600;letter-spacing:2px}
 .verdict h1{font-family:var(--disp);font-weight:700;font-size:38px;letter-spacing:.5px}
+/* FAIR ODD label (δεξια στο verdict) */
+.verdict>.tag,.verdict>h1,.verdict>.sub{padding-right:150px}
+.verdict .fair-odd{position:absolute;top:24px;right:26px;z-index:3;display:flex;flex-direction:column;gap:3px;text-align:right;
+  background:rgba(0,0,0,.30);border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:11px 15px;min-width:104px}
+.verdict .fair-odd .fo-lbl{font-family:var(--disp);font-weight:600;font-size:11px;letter-spacing:2px;color:var(--muted)}
+.verdict .fair-odd .fo-val{font-family:var(--mono);font-size:27px;font-weight:700;line-height:1;color:var(--amber)}
+.verdict .fair-odd.ok .fo-val{color:var(--green)}
+.verdict .fair-odd.no .fo-val{color:var(--red)}
+.verdict .fair-odd .fo-note{font-size:10px;color:var(--muted);letter-spacing:.3px}
+@media(max-width:600px){
+  .verdict>.tag,.verdict>h1,.verdict>.sub{padding-right:0}
+  .verdict .fair-odd{position:static;margin:0 0 12px;align-items:flex-start;text-align:left;align-self:flex-start}
+}
 
 /* --- KPI / buckets / chart --- */
 .kpi,.bk,.chart-card{background:rgba(4,22,14,.82);border:1px solid var(--line2);border-radius:13px;box-shadow:var(--shadow)}
@@ -1825,6 +1838,8 @@ function render(res){
   const host=document.getElementById("results"); host.style.display="block";
   const {wins,bets,losses,pnl,ao}=res;
   const hit=bets?wins/bets:0, be=ao>0?1/ao:0, roi=bets?pnl/bets:0;
+  const fairOdd=hit>0?1/hit:0;            // ελαχιστη "δικαιη" αποδοση για breakeven
+  const clears=(ao>0&&hit>0&&ao>=fairOdd);
   const profitable=pnl>0;
   const profBuckets=res.buckets.filter(b=>b.pnl>0&&b.bets>0).map(b=>bucketLabel(b));
 
@@ -1840,6 +1855,11 @@ function render(res){
 
   let html=`
   <div class="verdict ${profitable?'good':'bad'}">
+    <div class="fair-odd ${clears?'ok':'no'}">
+      <span class="fo-lbl">FAIR ODD</span>
+      <span class="fo-val">${hit>0?fmt(fairOdd,2):'–'}</span>
+      <span class="fo-note">${hit>0?'ελάχιστη για κέρδος':'καμία νίκη'}</span>
+    </div>
     <div class="tag">ΕΤΥΜΗΓΟΡΙΑ — ${bets} ΣΤΟΙΧΗΜΑΤΑ${filterTxt}</div>
     <h1>${profitable?'✓ ΚΕΡΔΟΦΟΡΟ':'✕ ΜΗ ΚΕΡΔΟΦΟΡΟ'}  <span style="font-family:var(--mono);font-size:24px">${fmt(pnl,1)}u</span></h1>
     <div class="sub">ROI <b>${fmt(roi*100,2)}%</b> · Hit rate <b>${pct(hit)}</b> vs breakeven <b>${pct(be)}</b> @ απόδοση ${ao} · ${hit>be?'<span style="color:var(--green)">edge θετικό</span>':'<span style="color:var(--red)">κάτω από το breakeven</span>'}</div>
