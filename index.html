@@ -366,19 +366,6 @@ select.odd-in option:checked,.leg select option:checked{
   background:radial-gradient(circle,rgba(255,210,74,.16),transparent 70%);pointer-events:none}
 .verdict .tag{font-family:var(--disp);font-weight:600;letter-spacing:2px}
 .verdict h1{font-family:var(--disp);font-weight:700;font-size:38px;letter-spacing:.5px}
-/* FAIR ODD label (δεξια στο verdict) */
-.verdict>.tag,.verdict>h1,.verdict>.sub{padding-right:150px}
-.verdict .fair-odd{position:absolute;top:24px;right:26px;z-index:3;display:flex;flex-direction:column;gap:3px;text-align:right;
-  background:rgba(0,0,0,.30);border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:11px 15px;min-width:104px}
-.verdict .fair-odd .fo-lbl{font-family:var(--disp);font-weight:600;font-size:11px;letter-spacing:2px;color:var(--muted)}
-.verdict .fair-odd .fo-val{font-family:var(--mono);font-size:27px;font-weight:700;line-height:1;color:var(--amber)}
-.verdict .fair-odd.ok .fo-val{color:var(--green)}
-.verdict .fair-odd.no .fo-val{color:var(--red)}
-.verdict .fair-odd .fo-note{font-size:10px;color:var(--muted);letter-spacing:.3px}
-@media(max-width:600px){
-  .verdict>.tag,.verdict>h1,.verdict>.sub{padding-right:0}
-  .verdict .fair-odd{position:static;margin:0 0 12px;align-items:flex-start;text-align:left;align-self:flex-start}
-}
 
 /* --- KPI / buckets / chart --- */
 .kpi,.bk,.chart-card{background:rgba(4,22,14,.82);border:1px solid var(--line2);border-radius:13px;box-shadow:var(--shadow)}
@@ -588,7 +575,7 @@ select.odd-in.set, .leg select.set, select.odd-in:focus, .leg select:focus{
           <div id="legs"></div>
 
           <div class="ctrl-row" style="align-items:flex-start">
-            <label>Corners Handicap 1st Half<br><span class="hint">(favourite − / underdog +)</span></label>
+            <label>Corners Handicap 1st Half<br><span class="hint">(favourite ∓ / underdog ±)</span></label>
             <div>
               <select class="odd-in" id="hcap1h" style="width:auto">
                 <option value="">— OFF</option>
@@ -599,6 +586,13 @@ select.odd-in.set, .leg select.set, select.odd-in:focus, .leg select:focus{
                   <option value="F3.5">Favourite −3.5</option>
                   <option value="F4.5">Favourite −4.5</option>
                 </optgroup>
+                <optgroup label="Favourite (+) · αντίθετο">
+                  <option value="P0.5">Favourite +0.5</option>
+                  <option value="P1.5">Favourite +1.5</option>
+                  <option value="P2.5">Favourite +2.5</option>
+                  <option value="P3.5">Favourite +3.5</option>
+                  <option value="P4.5">Favourite +4.5</option>
+                </optgroup>
                 <optgroup label="Underdog (+)">
                   <option value="U0.5">Underdog +0.5</option>
                   <option value="U1.5">Underdog +1.5</option>
@@ -606,13 +600,20 @@ select.odd-in.set, .leg select.set, select.odd-in:focus, .leg select:focus{
                   <option value="U3.5">Underdog +3.5</option>
                   <option value="U4.5">Underdog +4.5</option>
                 </optgroup>
+                <optgroup label="Underdog (−) · αντίθετο">
+                  <option value="M0.5">Underdog −0.5</option>
+                  <option value="M1.5">Underdog −1.5</option>
+                  <option value="M2.5">Underdog −2.5</option>
+                  <option value="M3.5">Underdog −3.5</option>
+                  <option value="M4.5">Underdog −4.5</option>
+                </optgroup>
               </select>
               <div class="hcap-expl" id="hcap1h-expl"></div>
             </div>
           </div>
 
           <div class="ctrl-row" style="align-items:flex-start">
-            <label>Corners Handicap 2nd Half<br><span class="hint">(favourite − / underdog +)</span></label>
+            <label>Corners Handicap 2nd Half<br><span class="hint">(favourite ∓ / underdog ±)</span></label>
             <div>
               <select class="odd-in" id="hcap2h" style="width:auto">
                 <option value="">— OFF</option>
@@ -623,6 +624,13 @@ select.odd-in.set, .leg select.set, select.odd-in:focus, .leg select:focus{
                   <option value="F3.5">Favourite −3.5</option>
                   <option value="F4.5">Favourite −4.5</option>
                 </optgroup>
+                <optgroup label="Favourite (+) · αντίθετο">
+                  <option value="P0.5">Favourite +0.5</option>
+                  <option value="P1.5">Favourite +1.5</option>
+                  <option value="P2.5">Favourite +2.5</option>
+                  <option value="P3.5">Favourite +3.5</option>
+                  <option value="P4.5">Favourite +4.5</option>
+                </optgroup>
                 <optgroup label="Underdog (+)">
                   <option value="U0.5">Underdog +0.5</option>
                   <option value="U1.5">Underdog +1.5</option>
@@ -630,13 +638,20 @@ select.odd-in.set, .leg select.set, select.odd-in:focus, .leg select:focus{
                   <option value="U3.5">Underdog +3.5</option>
                   <option value="U4.5">Underdog +4.5</option>
                 </optgroup>
+                <optgroup label="Underdog (−) · αντίθετο">
+                  <option value="M0.5">Underdog −0.5</option>
+                  <option value="M1.5">Underdog −1.5</option>
+                  <option value="M2.5">Underdog −2.5</option>
+                  <option value="M3.5">Underdog −3.5</option>
+                  <option value="M4.5">Underdog −4.5</option>
+                </optgroup>
               </select>
               <div class="hcap-expl" id="hcap2h-expl"></div>
             </div>
           </div>
 
           <div class="ctrl-row" style="align-items:flex-start">
-            <label>Corners Handicap Match<br><span class="hint">(favourite − / underdog +)</span></label>
+            <label>Corners Handicap Match<br><span class="hint">(favourite ∓ / underdog ±)</span></label>
             <div>
               <select class="odd-in" id="hcap" style="width:auto">
                 <option value="">— OFF</option>
@@ -648,6 +663,14 @@ select.odd-in.set, .leg select.set, select.odd-in:focus, .leg select:focus{
                   <option value="F4.5">Favourite −4.5</option>
                   <option value="F5.5">Favourite −5.5</option>
                 </optgroup>
+                <optgroup label="Favourite (+) · αντίθετο">
+                  <option value="P0.5">Favourite +0.5</option>
+                  <option value="P1.5">Favourite +1.5</option>
+                  <option value="P2.5">Favourite +2.5</option>
+                  <option value="P3.5">Favourite +3.5</option>
+                  <option value="P4.5">Favourite +4.5</option>
+                  <option value="P5.5">Favourite +5.5</option>
+                </optgroup>
                 <optgroup label="Underdog (+)">
                   <option value="U0.5">Underdog +0.5</option>
                   <option value="U1.5">Underdog +1.5</option>
@@ -655,6 +678,14 @@ select.odd-in.set, .leg select.set, select.odd-in:focus, .leg select:focus{
                   <option value="U3.5">Underdog +3.5</option>
                   <option value="U4.5">Underdog +4.5</option>
                   <option value="U5.5">Underdog +5.5</option>
+                </optgroup>
+                <optgroup label="Underdog (−) · αντίθετο">
+                  <option value="M0.5">Underdog −0.5</option>
+                  <option value="M1.5">Underdog −1.5</option>
+                  <option value="M2.5">Underdog −2.5</option>
+                  <option value="M3.5">Underdog −3.5</option>
+                  <option value="M4.5">Underdog −4.5</option>
+                  <option value="M5.5">Underdog −5.5</option>
                 </optgroup>
               </select>
               <div class="hcap-expl" id="hcap-expl"></div>
@@ -686,7 +717,7 @@ select.odd-in.set, .leg select.set, select.odd-in:focus, .leg select:focus{
           </div>
 
           <div class="ctrl-row" style="align-items:flex-start">
-            <label>Goals Handicap<br><span class="hint">(favourite − / underdog +)</span></label>
+            <label>Goals Handicap<br><span class="hint">(favourite ∓ / underdog ±)</span></label>
             <div>
               <select class="odd-in" id="ghcap" style="width:auto">
                 <option value="">— OFF</option>
@@ -696,11 +727,23 @@ select.odd-in.set, .leg select.set, select.odd-in:focus, .leg select:focus{
                   <option value="F2.5">Favourite −2.5</option>
                   <option value="F3.5">Favourite −3.5</option>
                 </optgroup>
+                <optgroup label="Favourite (+) · αντίθετο">
+                  <option value="P0.5">Favourite +0.5</option>
+                  <option value="P1.5">Favourite +1.5</option>
+                  <option value="P2.5">Favourite +2.5</option>
+                  <option value="P3.5">Favourite +3.5</option>
+                </optgroup>
                 <optgroup label="Underdog (+)">
                   <option value="U0.5">Underdog +0.5</option>
                   <option value="U1.5">Underdog +1.5</option>
                   <option value="U2.5">Underdog +2.5</option>
                   <option value="U3.5">Underdog +3.5</option>
+                </optgroup>
+                <optgroup label="Underdog (−) · αντίθετο">
+                  <option value="M0.5">Underdog −0.5</option>
+                  <option value="M1.5">Underdog −1.5</option>
+                  <option value="M2.5">Underdog −2.5</option>
+                  <option value="M3.5">Underdog −3.5</option>
                 </optgroup>
               </select>
               <div class="hcap-expl" id="ghcap-expl"></div>
@@ -838,6 +881,18 @@ function cmpNumeric(actual,op,target){
   if(op==="=") return Math.abs(a-t)<1e-9;
   if(op==="!=") return Math.abs(a-t)>=1e-9;
   return false;
+}
+
+/* Handicap outcome (κοινο για corners & goals).
+   F = favourite −h  (favTot−h > dogTot)     U = underdog +h  (dogTot+h > favTot)
+   P = favourite +h  (favTot+h > dogTot)      M = underdog −h  (dogTot−h > favTot)  ← τα ΑΝΤΙΘΕΤΑ */
+function hcapOutcome(side,h,favTot,dogTot){
+  let ok=false, scoreStr="–";
+  if(side==="F"){ const e=favTot-h; ok=e>dogTot; scoreStr=`${e}-${dogTot}`; }
+  else if(side==="U"){ const e=dogTot+h; ok=e>favTot; scoreStr=`${favTot}-${e}`; }
+  else if(side==="P"){ const e=favTot+h; ok=e>dogTot; scoreStr=`${e}-${dogTot}`; }
+  else if(side==="M"){ const e=dogTot-h; ok=e>favTot; scoreStr=`${favTot}-${e}`; }
+  return {ok,scoreStr};
 }
 
 const DISCRETE_LIST=[
@@ -1136,9 +1191,8 @@ function analyze(matches,legs,defineHome,avgOdd,favMin,favMax){
           if(!anyData) missingData=true;
           const favTot=favIsHome?homeTot:awayTot;
           const dogTot=favIsHome?awayTot:homeTot;
-          const h=leg.cornersH.h;
-          if(leg.cornersH.side==="F"){ const eff=favTot-h; legOk=eff>dogTot; scoreStr=`${eff}-${dogTot}`; }
-          else { const eff=dogTot+h; legOk=eff>favTot; scoreStr=`${favTot}-${eff}`; }
+          const _o=hcapOutcome(leg.cornersH.side,leg.cornersH.h,favTot,dogTot);
+          legOk=_o.ok; scoreStr=_o.scoreStr;
           usage[catName]=(usage[catName]||0)+1;
         }
         allOk=allOk&&legOk;
@@ -1146,16 +1200,16 @@ function analyze(matches,legs,defineHome,avgOdd,favMin,favMax){
         continue;
       }
       if(leg.goalsH!==undefined){
-        // Goals handicap: favourite (−h) or underdog (+h), full-time goals
+        // Goals handicap: F/U κανονικα, P/M αντιθετα (ιδιο dropdown), full-time goals
         const foh=normFloat(oh), foa=normFloat(oa);
         let legOk=false, scoreStr="–";
         if(foh!==null && foa!==null && foh!==foa){
           const favIsHome=foh<foa;
           const lg=normFloat(mm.L), mg=normFloat(mm.M); // full-time home / away goals
           if(lg!==null && mg!==null){
-            const favG=favIsHome?lg:mg, dogG=favIsHome?mg:lg, h=leg.goalsH.h;
-            if(leg.goalsH.side==="F"){ const eff=favG-h; legOk=eff>dogG; scoreStr=`${eff}-${dogG}`; }
-            else { const eff=dogG+h; legOk=eff>favG; scoreStr=`${favG}-${eff}`; }
+            const favG=favIsHome?lg:mg, dogG=favIsHome?mg:lg;
+            const _o=hcapOutcome(leg.goalsH.side,leg.goalsH.h,favG,dogG);
+            legOk=_o.ok; scoreStr=_o.scoreStr;
             usage["GOALS HANDICAP"]++;
           } else missingData=true;
         }
@@ -1357,11 +1411,13 @@ function evalCornersH(leg,m,oh,oa){
   const foh=normFloat(oh), foa=normFloat(oa);
   if(foh===null||foa===null||foh===foa) return false;
   const favIsHome=foh<foa;
-  const homeTot=(normFloat(m.R)||0)+(normFloat(m.T)||0);
-  const awayTot=(normFloat(m.S)||0)+(normFloat(m.U)||0);
-  const favTot=favIsHome?homeTot:awayTot, dogTot=favIsHome?awayTot:homeTot, h=leg.cornersH.h;
-  if(leg.cornersH.side==="F") return (favTot-h)>dogTot;
-  return (dogTot+h)>favTot;
+  const per=leg.cornersH.period||"MATCH";
+  let homeTot, awayTot;
+  if(per==="1H"){ homeTot=(normFloat(m.R)||0); awayTot=(normFloat(m.S)||0); }
+  else if(per==="2H"){ homeTot=(normFloat(m.T)||0); awayTot=(normFloat(m.U)||0); }
+  else { homeTot=(normFloat(m.R)||0)+(normFloat(m.T)||0); awayTot=(normFloat(m.S)||0)+(normFloat(m.U)||0); }
+  const favTot=favIsHome?homeTot:awayTot, dogTot=favIsHome?awayTot:homeTot;
+  return hcapOutcome(leg.cornersH.side,leg.cornersH.h,favTot,dogTot).ok;
 }
 function raceWinner(tlStr,target,afterMin){
   let ev=parseTL(tlStr); if(!ev.length) return null;
@@ -1389,9 +1445,8 @@ function evalGoalsH(leg,m,oh,oa){  const foh=normFloat(oh), foa=normFloat(oa);
   const favIsHome=foh<foa;
   const lg=normFloat(m.L), mg=normFloat(m.M);
   if(lg===null||mg===null) return false;
-  const favG=favIsHome?lg:mg, dogG=favIsHome?mg:lg, h=leg.goalsH.h;
-  if(leg.goalsH.side==="F") return (favG-h)>dogG;
-  return (dogG+h)>favG;
+  const favG=favIsHome?lg:mg, dogG=favIsHome?mg:lg;
+  return hcapOutcome(leg.goalsH.side,leg.goalsH.h,favG,dogG).ok;
 }
 function evalLegsState(legs,v,oh,oa,side){
   const swap=determineSwap(side,oh,oa);
@@ -1620,7 +1675,7 @@ function loadPatternObj(obj){
   if(obj.side){SIDE=obj.side; document.querySelectorAll("#seg-side button").forEach(b=>b.classList.toggle("on",b.dataset.v===SIDE));}
   relabelLegs();
   if(obj.avgOdd!=null) document.getElementById("avg-odd").value=obj.avgOdd;
-  let hc=obj.hcap||""; if(hc && !/^[FU]/.test(hc)) hc="U"+hc;
+  let hc=obj.hcap||""; if(hc && !/^[FUPM]/.test(hc)) hc="U"+hc;
   document.getElementById("hcap").value = hc; refreshHcap();
   document.getElementById("hcap1h").value = obj.hcap1h||""; refreshHcapPeriod("1H");
   document.getElementById("hcap2h").value = obj.hcap2h||""; refreshHcapPeriod("2H");
@@ -1838,8 +1893,6 @@ function render(res){
   const host=document.getElementById("results"); host.style.display="block";
   const {wins,bets,losses,pnl,ao}=res;
   const hit=bets?wins/bets:0, be=ao>0?1/ao:0, roi=bets?pnl/bets:0;
-  const fairOdd=hit>0?1/hit:0;            // ελαχιστη "δικαιη" αποδοση για breakeven
-  const clears=(ao>0&&hit>0&&ao>=fairOdd);
   const profitable=pnl>0;
   const profBuckets=res.buckets.filter(b=>b.pnl>0&&b.bets>0).map(b=>bucketLabel(b));
 
@@ -1855,11 +1908,6 @@ function render(res){
 
   let html=`
   <div class="verdict ${profitable?'good':'bad'}">
-    <div class="fair-odd ${clears?'ok':'no'}">
-      <span class="fo-lbl">FAIR ODD</span>
-      <span class="fo-val">${hit>0?fmt(fairOdd,2):'–'}</span>
-      <span class="fo-note">${hit>0?'ελάχιστη για κέρδος':'καμία νίκη'}</span>
-    </div>
     <div class="tag">ΕΤΥΜΗΓΟΡΙΑ — ${bets} ΣΤΟΙΧΗΜΑΤΑ${filterTxt}</div>
     <h1>${profitable?'✓ ΚΕΡΔΟΦΟΡΟ':'✕ ΜΗ ΚΕΡΔΟΦΟΡΟ'}  <span style="font-family:var(--mono);font-size:24px">${fmt(pnl,1)}u</span></h1>
     <div class="sub">ROI <b>${fmt(roi*100,2)}%</b> · Hit rate <b>${pct(hit)}</b> vs breakeven <b>${pct(be)}</b> @ απόδοση ${ao} · ${hit>be?'<span style="color:var(--green)">edge θετικό</span>':'<span style="color:var(--red)">κάτω από το breakeven</span>'}</div>
@@ -2146,35 +2194,31 @@ document.querySelectorAll("#seg-side button").forEach(b=>b.addEventListener("cli
   b.classList.add("on"); SIDE=b.dataset.v; relabelLegs(); histSnap(true);
 }));
 
-function refreshHcap(){
-  const v=document.getElementById("hcap").value, el=document.getElementById("hcap-expl");
-  const sel=document.getElementById("hcap"); sel.classList.toggle("set",v!=="");
-  if(!v){ el.textContent=""; return; }
-  const side=v[0], h=v.slice(1);
-  if(side==="F") el.innerHTML=`Wins if: <b>favourite corners −${h} &gt; underdog corners</b>.`;
-  else el.innerHTML=`Wins if: <b>underdog corners +${h} &gt; favourite corners</b>.`;
+function _hcapExpl(v, per, unit){
+  if(!v) return "";
+  const side=v[0], h=v.slice(1), P = per ? per+" " : "";
+  if(side==="F") return `Wins if: <b>${P}favourite ${unit} −${h} &gt; underdog</b>.`;
+  if(side==="U") return `Wins if: <b>${P}underdog ${unit} +${h} &gt; favourite</b>.`;
+  if(side==="P") return `Wins if: <b>${P}favourite ${unit} +${h} &gt; underdog</b>.`;
+  if(side==="M") return `Wins if: <b>${P}underdog ${unit} −${h} &gt; favourite</b>.`;
+  return "";
 }
+function _setSel(id, per, unit){
+  const sel=document.getElementById(id); if(!sel) return;
+  const el=document.getElementById(id+"-expl");
+  sel.classList.toggle("set", sel.value!=="");
+  if(el) el.innerHTML=_hcapExpl(sel.value, per, unit);
+}
+function refreshHcap(){ _setSel("hcap","","corners"); }
 document.getElementById("hcap").addEventListener("change",refreshHcap);
 function refreshHcapPeriod(which){
-  const id = which==="1H" ? "hcap1h" : "hcap2h";
-  const v=document.getElementById(id).value, el=document.getElementById(id+"-expl");
-  const sel=document.getElementById(id); sel.classList.toggle("set",v!=="");
-  if(!v){ el.textContent=""; return; }
-  const side=v[0], h=v.slice(1);
   const per = which==="1H" ? "1st-half" : "2nd-half";
-  if(side==="F") el.innerHTML=`Wins if: <b>${per} favourite corners −${h} &gt; underdog</b>.`;
-  else el.innerHTML=`Wins if: <b>${per} underdog corners +${h} &gt; favourite</b>.`;
+  const id  = which==="1H" ? "hcap1h" : "hcap2h";
+  _setSel(id, per, "corners");
 }
 document.getElementById("hcap1h").addEventListener("change",()=>{refreshHcapPeriod("1H");histSnap(true);});
 document.getElementById("hcap2h").addEventListener("change",()=>{refreshHcapPeriod("2H");histSnap(true);});
-function refreshGhcap(){
-  const v=document.getElementById("ghcap").value, el=document.getElementById("ghcap-expl");
-  const sel=document.getElementById("ghcap"); sel.classList.toggle("set",v!=="");
-  if(!v){ el.textContent=""; return; }
-  const side=v[0], h=v.slice(1);
-  if(side==="F") el.innerHTML=`Wins if: <b>favourite goals −${h} &gt; underdog goals</b>.`;
-  else el.innerHTML=`Wins if: <b>underdog goals +${h} &gt; favourite goals</b>.`;
-}
+function refreshGhcap(){ _setSel("ghcap","","goals"); }
 document.getElementById("ghcap").addEventListener("change",refreshGhcap);
 function refreshRace(){
   const v=document.getElementById("race").value, el=document.getElementById("race-expl");
@@ -2234,10 +2278,12 @@ function describeLegs(obj){
     if(d.op2) parts.push(`${opSym(d.op2)} ${d.val2||""}`.trim());
     if(parts.length) lines.push(`${sideLabel(shortCat(cat),obj.side)}  ${parts.join("  &  ")}`);
   }));
-  if(obj.hcap){ let v=obj.hcap; if(!/^[FU]/.test(v)) v="U"+v; const s=v[0],hh=v.slice(1); lines.push(`CORNERS HANDICAP  ${s==="F"?"φαβορί −":"αουτσάιντερ +"}${hh}`); }
-  if(obj.hcap1h){ const s=obj.hcap1h[0], hh=obj.hcap1h.slice(1); lines.push(`CORNERS HANDICAP 1ST HALF  ${s==="F"?"φαβορί −":"αουτσάιντερ +"}${hh}`); }
-  if(obj.hcap2h){ const s=obj.hcap2h[0], hh=obj.hcap2h.slice(1); lines.push(`CORNERS HANDICAP 2ND HALF  ${s==="F"?"φαβορί −":"αουτσάιντερ +"}${hh}`); }
-  if(obj.ghcap){ const s=obj.ghcap[0], hh=obj.ghcap.slice(1); lines.push(`GOALS HANDICAP  ${s==="F"?"φαβορί −":"αουτσάιντερ +"}${hh}`); }
+  const HS={F:"φαβορί −",U:"αουτσάιντερ +",P:"φαβορί +",M:"αουτσάιντερ −"};
+  const hd=v=>v?((HS[v[0]]||"")+v.slice(1)):"";
+  if(obj.hcap){ let v=obj.hcap; if(!/^[FUPM]/.test(v)) v="U"+v; lines.push(`CORNERS HANDICAP  ${hd(v)}`); }
+  if(obj.hcap1h) lines.push(`CORNERS HANDICAP 1ST HALF  ${hd(obj.hcap1h)}`);
+  if(obj.hcap2h) lines.push(`CORNERS HANDICAP 2ND HALF  ${hd(obj.hcap2h)}`);
+  if(obj.ghcap) lines.push(`GOALS HANDICAP  ${hd(obj.ghcap)}`);
   if(obj.favMin||obj.favMax) lines.push(`ΦΙΛΤΡΟ απόδοσης φαβορί  ${obj.favMin||"–"}–${obj.favMax||"–"}`);
   return lines;
 }
@@ -2345,7 +2391,7 @@ function histSnap(immediate){
 function _flashEl(el){ if(!el) return; el.classList.remove("flash-hl"); void el.offsetWidth; el.classList.add("flash-hl"); setTimeout(()=>el.classList.remove("flash-hl"),1100); }
 function _diffTargets(prev,next){
   const t=[];
-  [["avgOdd","avg-odd"],["favMin","fav-min"],["favMax","fav-max"],["hcap","hcap"],["ghcap","ghcap"]].forEach(([k,id])=>{
+  [["avgOdd","avg-odd"],["favMin","fav-min"],["favMax","fav-max"],["hcap","hcap"],["hcap1h","hcap1h"],["hcap2h","hcap2h"],["ghcap","ghcap"]].forEach(([k,id])=>{
     if((prev[k]||"")!==(next[k]||"")){ const el=document.getElementById(id); if(el) t.push(el); }
   });
   if(prev.side!==next.side){ const el=document.getElementById("seg-side"); if(el) t.push(el); }
